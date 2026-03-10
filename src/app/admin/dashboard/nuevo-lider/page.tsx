@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { LocationSelector } from "@/components/ui/LocationSelector";
-import { createUserAction } from "@/app/actions/users";
+import { createUserAction, getUsers } from "@/app/actions/users";
 import { Loader2, ArrowLeft } from "lucide-react";
 
 export default function CrearLider() {
@@ -20,8 +20,17 @@ export default function CrearLider() {
         districtId: "",
         corregimientoId: "",
         communityId: "",
-        role: "Lider de Zona" // Role por defecto para esta vista
+        role: "Lider de Zona",
+        parentLeaderId: ""
     });
+
+    const [availableLeaders, setAvailableLeaders] = useState<any[]>([]);
+
+    useEffect(() => {
+        getUsers().then(users => {
+            setAvailableLeaders(users.filter(u => u.role.name !== "ADMIN"));
+        });
+    }, []);
 
     const currentUser = useAppStore((state) => state.currentUser);
 
@@ -122,6 +131,35 @@ export default function CrearLider() {
                                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
                                         placeholder="6000-0000"
                                     />
+                                </div>
+                                <div className="sm:col-span-3 border border-blue-100 rounded-xl p-4 bg-blue-50/30">
+                                    <label className="block text-sm font-semibold text-blue-900 mb-2">Líder Superior (Jerarquía)</label>
+                                    <select
+                                        disabled={isPending}
+                                        className="appearance-none block w-full bg-white border border-blue-200 text-slate-900 rounded-lg py-2.5 px-3 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-800 transition-colors shadow-sm"
+                                        value={formData.parentLeaderId}
+                                        onChange={(e) => setFormData({ ...formData, parentLeaderId: e.target.value })}
+                                    >
+                                        <option value="">Nivel Superior (Sin Padre)</option>
+                                        {availableLeaders.map(l => (
+                                            <option key={l.id} value={l.id}>{l.name} {l.lastName} ({l.role.name})</option>
+                                        ))}
+                                    </select>
+                                </div>
+                                <div className="sm:col-span-3 border border-gray-100 rounded-xl p-4 bg-slate-50/50">
+                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Rol Asignado</label>
+                                    <select
+                                        required
+                                        disabled={isPending}
+                                        className="appearance-none block w-full bg-white border border-gray-200 text-slate-900 rounded-lg py-2.5 px-3 leading-tight focus:outline-none focus:ring-2 focus:ring-slate-800 transition-colors shadow-sm"
+                                        value={formData.role}
+                                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                                    >
+                                        <option value="Lider Regional">Lider Regional (Provincia)</option>
+                                        <option value="Lider de Zona">Lider de Zona (Distrito)</option>
+                                        <option value="Comunitario">Lider Comunitario (Corregimiento)</option>
+                                        <option value="Activista">Activista (Apoyo)</option>
+                                    </select>
                                 </div>
                             </div>
                         </div>

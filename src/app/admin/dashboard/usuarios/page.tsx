@@ -63,7 +63,8 @@ export default function GestionUsuarios() {
         email: "",
         password: "",
         phone: "",
-        role: "ADMIN"
+        role: "ADMIN",
+        parentLeaderId: ""
     });
 
     const handleCreateAdmin = (e: React.FormEvent) => {
@@ -88,7 +89,7 @@ export default function GestionUsuarios() {
                 }));
                 setUsers(mappedUsers as any);
 
-                setAdminData({ name: "", lastName: "", email: "", password: "", phone: "", role: "ADMIN" });
+                setAdminData({ name: "", lastName: "", email: "", password: "", phone: "", role: "ADMIN", parentLeaderId: "" });
                 alert("Usuario creado exitosamente");
             } else {
                 alert("Error al crear usuario: " + result.error);
@@ -195,6 +196,22 @@ export default function GestionUsuarios() {
                             onChange={(e) => setAdminData({ ...adminData, phone: e.target.value })}
                         />
                     </div>
+                    {adminData.role !== "ADMIN" && (
+                        <div className="space-y-2 lg:col-span-1">
+                            <label className="text-sm font-semibold text-blue-700">Líder Superior (Jerarquía)</label>
+                            <select
+                                className="w-full p-3 border border-blue-200 rounded-xl bg-blue-50 focus:ring-2 focus:ring-blue-500 outline-none"
+                                value={adminData.parentLeaderId}
+                                onChange={(e) => setAdminData({ ...adminData, parentLeaderId: e.target.value })}
+                                disabled={isPending}
+                            >
+                                <option value="">Sin Líder (Nivel Superior)</option>
+                                {users.filter(u => u.role !== "ADMIN").map(u => (
+                                    <option key={u.id} value={u.id}>{u.name} {u.lastName} ({u.role})</option>
+                                ))}
+                            </select>
+                        </div>
+                    )}
                     <div className="flex items-end lg:col-span-3">
                         <button
                             type="submit"

@@ -89,3 +89,29 @@ export async function getUserByInviteCode(code: string) {
         return null;
     }
 }
+
+export async function getHierarchy() {
+    try {
+        const hierarchy = await prisma.user.findMany({
+            where: {
+                role: {
+                    name: { not: "ADMIN" }
+                }
+            },
+            include: {
+                role: true,
+                subordinates: {
+                    include: {
+                        subordinate: {
+                            include: { role: true }
+                        }
+                    }
+                }
+            }
+        });
+        return hierarchy;
+    } catch (error) {
+        console.error("Error fetching hierarchy:", error);
+        return [];
+    }
+}
