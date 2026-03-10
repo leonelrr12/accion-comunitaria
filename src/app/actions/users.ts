@@ -44,7 +44,7 @@ export async function createUserAction(data: any) {
                 name: data.name,
                 lastName: data.lastName,
                 email: data.email,
-                passwordHash: data.password || 'password123', // Default si no viene
+                passwordHash: data.password || 'password123',
                 phone: data.phone,
                 roleId: role.id,
                 createdBy: data.createdBy ? parseInt(String(data.createdBy)) : null,
@@ -56,7 +56,19 @@ export async function createUserAction(data: any) {
             }
         });
 
+        // 3. Si se proporcionó un líder superior, crear registro en la jerarquía
+        if (data.parentLeaderId) {
+            await prisma.userHierarchy.create({
+                data: {
+                    leaderId: parseInt(String(data.parentLeaderId)),
+                    subordinateId: newUser.id,
+                    level: 1 // Nivel relativo por defecto
+                }
+            });
+        }
+
         revalidatePath("/admin/dashboard/usuarios");
+        revalidatePath("/admin/dashboard");
         return { success: true, user: newUser };
     } catch (error: any) {
         console.error("Error creating user:", error);
