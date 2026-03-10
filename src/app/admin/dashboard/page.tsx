@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useAppStore } from "@/lib/store";
-import { UserPlus, ShieldAlert, BarChart3, Loader2 } from "lucide-react";
+import { UserPlus, Shield, BarChart3, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { getUsers } from "@/app/actions/users";
 import { getAffiliates } from "@/app/actions/affiliates";
@@ -69,32 +69,32 @@ export default function AdminDashboard() {
                 </div>
             </div>
 
-            {/* Metrics */}
-            <div className="grid grid-cols-1 gap-6 sm:grid-cols-3">
-                <div className="bg-white overflow-hidden shadow-sm rounded-2xl border border-gray-100 p-6 flex items-center space-x-4">
-                    <div className="p-3 bg-indigo-100 rounded-xl">
-                        <ShieldAlert className="h-8 w-8 text-indigo-600" />
+            {/* Dashboard Stats */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 md:gap-6">
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+                    <div className="p-3 bg-blue-50 rounded-xl">
+                        <Shield className="h-6 w-6 text-blue-600" />
                     </div>
                     <div>
-                        <p className="text-sm font-medium text-gray-500 truncate">Total Líderes Activos</p>
-                        <p className="mt-1 text-2xl font-bold text-gray-900">{lideresCount}</p>
+                        <p className="text-sm font-medium text-slate-500">Total Líderes Activos</p>
+                        <p className="text-2xl font-bold text-slate-900">{lideresCount}</p>
                     </div>
                 </div>
-                <div className="bg-white overflow-hidden shadow-sm rounded-2xl border border-gray-100 p-6 flex items-center space-x-4">
-                    <div className="p-3 bg-emerald-100 rounded-xl">
-                        <BarChart3 className="h-8 w-8 text-emerald-600" />
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center gap-4">
+                    <div className="p-3 bg-emerald-50 rounded-xl">
+                        <BarChart3 className="h-6 w-6 text-emerald-600" />
                     </div>
                     <div>
-                        <p className="text-sm font-medium text-gray-500 truncate">Total Afiliados Globales</p>
-                        <p className="mt-1 text-2xl font-bold text-gray-900">{afiliadosCount}</p>
+                        <p className="text-sm font-medium text-slate-500">Total Afiliados Globales</p>
+                        <p className="text-2xl font-bold text-slate-900">{afiliadosCount}</p>
                     </div>
                 </div>
             </div>
 
-            {/* List of Leaders */}
-            <div className="bg-white shadow-sm border border-gray-200 rounded-2xl overflow-hidden">
-                <div className="px-6 py-5 border-b border-gray-200 bg-gray-50 font-semibold text-gray-900">
-                    Directorio de Líderes (Sincronizado)
+            {/* TABLA DE LÍDERES */}
+            <div className="bg-white shadow-sm border border-gray-100 rounded-2xl overflow-hidden">
+                <div className="px-6 py-5 border-b border-gray-100 bg-gray-50 flex justify-between items-center flex-wrap gap-4">
+                    <h3 className="font-bold text-slate-900">Directorio de Líderes (Sincronizado)</h3>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
@@ -107,24 +107,24 @@ export default function AdminDashboard() {
                                 <th scope="col" className="px-6 py-4 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Suscripción</th>
                             </tr>
                         </thead>
-                        <tbody className="bg-white divide-y divide-gray-200">
+                        <tbody className="bg-white divide-y divide-gray-100">
                             {lideres.length > 0 ? (
                                 lideres.map((lider) => (
                                     <tr key={lider.id} className="hover:bg-slate-50 transition-colors">
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="flex items-center">
-                                                <div className="flex-shrink-0 h-10 w-10">
-                                                    <div className="h-10 w-10 rounded-full bg-slate-800 flex items-center justify-center text-white font-bold">
-                                                        {lider.name.charAt(0)}{lider.lastName.charAt(0)}
-                                                    </div>
+                                                <div className="h-10 w-10 flex-shrink-0 rounded-full bg-slate-800 text-white flex items-center justify-center font-bold text-xs">
+                                                    {lider.name?.charAt(0)}{lider.lastName?.charAt(0)}
                                                 </div>
                                                 <div className="ml-4">
-                                                    <div className="text-sm font-medium text-gray-900">{lider.name} {lider.lastName}</div>
+                                                    <div className="text-sm font-bold text-slate-900">{lider.name} {lider.lastName}</div>
                                                 </div>
                                             </div>
                                         </td>
-                                        <td className="px-6 py-4 whitespace-nowrap uppercase text-[10px] font-bold tracking-widest text-slate-500">
-                                            {lider.role.name}
+                                        <td className="px-6 py-4 whitespace-nowrap">
+                                            <span className="px-3 py-1 text-[10px] font-black rounded-lg uppercase tracking-widest bg-slate-100 text-slate-700 border border-slate-200">
+                                                {lider.role.name}
+                                            </span>
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <div className="text-sm text-gray-500">{lider.email}</div>
@@ -141,7 +141,7 @@ export default function AdminDashboard() {
                                 ))
                             ) : (
                                 <tr>
-                                    <td colSpan={4} className="px-6 py-10 text-center text-sm text-gray-500">
+                                    <td colSpan={5} className="px-6 py-10 text-center text-sm text-gray-500">
                                         No hay líderes registrados en la base de datos real.
                                     </td>
                                 </tr>

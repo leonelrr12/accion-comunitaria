@@ -5,7 +5,7 @@ import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { LocationSelector } from "@/components/ui/LocationSelector";
 import { createUserAction, getUsers } from "@/app/actions/users";
-import { Loader2, ArrowLeft } from "lucide-react";
+import { ArrowRight, Loader2, UserCircle, MapPin, Network, ArrowLeft } from "lucide-react";
 
 export default function CrearLider() {
     const router = useRouter();
@@ -79,143 +79,135 @@ export default function CrearLider() {
                 </div>
             </div>
 
-            <div className="bg-white shadow-sm border border-gray-200 sm:rounded-2xl sm:p-8">
-                <form className="space-y-8 divide-y divide-gray-100" onSubmit={handleSubmit}>
-                    <div className="space-y-8 divide-y divide-gray-100">
-                        <div>
-                            <div className="grid grid-cols-1 gap-y-6 gap-x-4 sm:grid-cols-6">
-                                <div className="sm:col-span-3 border border-gray-100 rounded-xl p-4 bg-slate-50/50">
-                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Nombre del Líder</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        disabled={isPending}
-                                        className="appearance-none block w-full bg-white border border-gray-200 text-slate-900 rounded-lg py-2.5 px-3 leading-tight focus:outline-none focus:ring-2 focus:ring-slate-800 transition-colors shadow-sm"
-                                        value={formData.name}
-                                        onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-                                        placeholder="Ej: Juan"
-                                    />
-                                </div>
-                                <div className="sm:col-span-3 border border-gray-100 rounded-xl p-4 bg-slate-50/50">
-                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Apellido</label>
-                                    <input
-                                        type="text"
-                                        required
-                                        disabled={isPending}
-                                        className="appearance-none block w-full bg-white border border-gray-200 text-slate-900 rounded-lg py-2.5 px-3 leading-tight focus:outline-none focus:ring-2 focus:ring-slate-800 transition-colors shadow-sm"
-                                        value={formData.lastName}
-                                        onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
-                                        placeholder="Ej: Pérez"
-                                    />
-                                </div>
-                                <div className="sm:col-span-3 border border-gray-100 rounded-xl p-4 bg-slate-50/50">
-                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Correo Electrónico</label>
-                                    <input
-                                        type="email"
-                                        required
-                                        disabled={isPending}
-                                        className="appearance-none block w-full bg-white border border-gray-200 text-slate-900 rounded-lg py-2.5 px-3 leading-tight focus:outline-none focus:ring-2 focus:ring-slate-800 transition-colors shadow-sm"
-                                        value={formData.email}
-                                        onChange={(e) => setFormData({ ...formData, email: e.target.value })}
-                                        placeholder="juan@email.com"
-                                    />
-                                </div>
-                                <div className="sm:col-span-3 border border-gray-100 rounded-xl p-4 bg-slate-50/50">
-                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Teléfono</label>
-                                    <input
-                                        type="tel"
-                                        required
-                                        disabled={isPending}
-                                        className="appearance-none block w-full bg-white border border-gray-200 text-slate-900 rounded-lg py-2.5 px-3 leading-tight focus:outline-none focus:ring-2 focus:ring-slate-800 transition-colors shadow-sm"
-                                        value={formData.phone}
-                                        onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-                                        placeholder="6000-0000"
-                                    />
-                                </div>
-                                <div className="sm:col-span-3 border border-blue-100 rounded-xl p-4 bg-blue-50/30">
-                                    <label className="block text-sm font-semibold text-blue-900 mb-2">Líder Superior (Jerarquía)</label>
-                                    <select
-                                        disabled={isPending}
-                                        className="appearance-none block w-full bg-white border border-blue-200 text-slate-900 rounded-lg py-2.5 px-3 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-800 transition-colors shadow-sm"
-                                        value={formData.parentLeaderId}
-                                        onChange={(e) => setFormData({ ...formData, parentLeaderId: e.target.value })}
-                                    >
-                                        <option value="">Nivel Superior (Sin Padre)</option>
-                                        {availableLeaders
-                                            .filter(l => {
-                                                // REGLAS DE NEGOCIO:
-                                                // 1. El activista no puede liderar a nadie
-                                                if (l.role.name === "Activista") return false;
-
-                                                // 2. El comunitario solo puede ser líder del Activista
-                                                if (l.role.name === "Comunitario" && formData.role !== "Activista") return false;
-
-                                                return true;
-                                            })
-                                            .map(l => (
-                                                <option key={l.id} value={l.id}>{l.name} {l.lastName} ({l.role.name})</option>
-                                            ))
-                                        }
-                                    </select>
-                                </div>
-                                <div className="sm:col-span-3 border border-gray-100 rounded-xl p-4 bg-slate-50/50">
-                                    <label className="block text-sm font-semibold text-slate-700 mb-2">Rol Asignado</label>
-                                    <select
-                                        required
-                                        disabled={isPending}
-                                        className="appearance-none block w-full bg-white border border-gray-200 text-slate-900 rounded-lg py-2.5 px-3 leading-tight focus:outline-none focus:ring-2 focus:ring-slate-800 transition-colors shadow-sm"
-                                        value={formData.role}
-                                        onChange={(e) => setFormData({ ...formData, role: e.target.value })}
-                                    >
-                                        <option value="Lider Regional">Lider Regional (Provincia)</option>
-                                        <option value="Lider de Zona">Lider de Zona (Distrito)</option>
-                                        <option value="Comunitario">Lider Comunitario (Corregimiento)</option>
-                                        <option value="Activista">Activista (Apoyo)</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div className="pt-8">
-                            <div>
-                                <h3 className="text-lg leading-6 font-semibold text-slate-900">Ubicación Geográfica Real</h3>
-                                <p className="mt-1 text-sm text-slate-500 mb-6">
-                                    El territorio que asignes aquí proviene de la base de datos geográfica.
-                                </p>
-                            </div>
-                            <div className="bg-white p-6 rounded-xl border border-blue-100 shadow-sm shadow-blue-50">
-                                <LocationSelector
-                                    provinceId={formData.provinceId}
-                                    districtId={formData.districtId}
-                                    corregimientoId={formData.corregimientoId}
-                                    communityId={formData.communityId}
-                                    setProvinceId={(val) => setFormData((prev) => ({ ...prev, provinceId: val }))}
-                                    setDistrictId={(val) => setFormData((prev) => ({ ...prev, districtId: val }))}
-                                    setCorregimientoId={(val) => setFormData((prev) => ({ ...prev, corregimientoId: val }))}
-                                    setCommunityId={(val) => setFormData((prev) => ({ ...prev, communityId: val }))}
+            <div className="bg-white shadow-sm border border-gray-100 rounded-2xl overflow-hidden p-6 md:p-8">
+                <form onSubmit={handleSubmit} className="space-y-8">
+                    {/* Sección 1: Datos de Usuario */}
+                    <div className="space-y-6">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Nombre</label>
+                                <input
+                                    className="w-full p-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={formData.name}
+                                    onChange={(e) => setFormData({ ...formData, name: e.target.value })}
+                                    required
                                     disabled={isPending}
                                 />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Apellido</label>
+                                <input
+                                    className="w-full p-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={formData.lastName}
+                                    onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                                    required
+                                    disabled={isPending}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Rol Asignado</label>
+                                <select
+                                    className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none font-semibold text-blue-600"
+                                    value={formData.role}
+                                    onChange={(e) => setFormData({ ...formData, role: e.target.value })}
+                                    disabled={isPending}
+                                >
+                                    <option value="Lider Regional">Lider Regional</option>
+                                    <option value="Lider de Zona">Lider de Zona</option>
+                                    <option value="Comunitario">Comunitario</option>
+                                    <option value="Activista">Activista</option>
+                                </select>
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Email</label>
+                                <input
+                                    className="w-full p-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                    type="email"
+                                    value={formData.email}
+                                    onChange={(e) => setFormData({ ...formData, email: e.target.value })}
+                                    required
+                                    disabled={isPending}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-slate-700">Teléfono</label>
+                                <input
+                                    className="w-full p-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                    type="tel"
+                                    value={formData.phone}
+                                    onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
+                                    disabled={isPending}
+                                />
+                            </div>
+                            <div className="space-y-2">
+                                <label className="text-sm font-bold text-blue-800 flex items-center gap-2">
+                                    <Network className="h-4 w-4" />
+                                    Líder Superior
+                                </label>
+                                <select
+                                    className="w-full p-3 bg-blue-50 border border-blue-100 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={formData.parentLeaderId}
+                                    onChange={(e) => setFormData({ ...formData, parentLeaderId: e.target.value })}
+                                    disabled={isPending}
+                                >
+                                    <option value="">Líder Principal (Nivel 0)</option>
+                                    {availableLeaders
+                                        .filter(u => u.role.name !== "ADMIN")
+                                        .filter(u => {
+                                            if (u.role.name === "Activista") return false;
+                                            if (u.role.name === "Comunitario" && formData.role !== "Activista") return false;
+                                            return true;
+                                        })
+                                        .map(u => (
+                                            <option key={u.id} value={u.id}>{u.name} {u.lastName} ({u.role.name})</option>
+                                        ))
+                                    }
+                                </select>
                             </div>
                         </div>
                     </div>
 
-                    <div className="pt-8">
-                        <div className="flex justify-end gap-3">
-                            <button
-                                type="button"
-                                onClick={() => router.back()}
-                                className="bg-white py-2.5 px-5 border border-slate-300 rounded-xl shadow-sm text-sm font-medium text-slate-700 hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-500 transition-colors"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={isPending}
-                                className="inline-flex justify-center flex-1 sm:flex-none py-2.5 px-8 border border-transparent shadow-sm shadow-slate-900/20 text-sm font-medium rounded-xl text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-colors disabled:opacity-50"
-                            >
-                                {isPending ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : "Registrar y Aprobar Líder"}
-                            </button>
+                    {/* Sección 2: Ubicación Geográfica */}
+                    <div className="pt-8 border-t border-gray-100">
+                        <div className="mb-6">
+                            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                <MapPin className="h-5 w-5 text-emerald-500" />
+                                Ubicación Geográfica
+                            </h3>
+                            <p className="text-sm text-slate-500">Asigna el territorio de operación para este líder.</p>
                         </div>
+                        <div className="bg-slate-50 p-6 rounded-2xl border border-gray-100">
+                            <LocationSelector
+                                provinceId={formData.provinceId}
+                                districtId={formData.districtId}
+                                corregimientoId={formData.corregimientoId}
+                                communityId={formData.communityId}
+                                setProvinceId={(val) => setFormData((prev) => ({ ...prev, provinceId: val }))}
+                                setDistrictId={(val) => setFormData((prev) => ({ ...prev, districtId: val }))}
+                                setCorregimientoId={(val) => setFormData((prev) => ({ ...prev, corregimientoId: val }))}
+                                setCommunityId={(val) => setFormData((prev) => ({ ...prev, communityId: val }))}
+                                disabled={isPending}
+                            />
+                        </div>
+                    </div>
+
+                    {/* Botones de Acción */}
+                    <div className="pt-8 flex flex-col sm:flex-row justify-end gap-3">
+                        <button
+                            type="button"
+                            onClick={() => router.back()}
+                            className="w-full sm:w-auto px-8 py-3 bg-white border border-gray-200 rounded-xl font-bold text-slate-600 hover:bg-slate-50 transition-colors"
+                        >
+                            Cancelar
+                        </button>
+                        <button
+                            type="submit"
+                            disabled={isPending}
+                            className="w-full sm:w-auto px-8 py-3 bg-slate-900 text-white rounded-xl font-black shadow-lg shadow-slate-200 hover:bg-black transition-all flex justify-center items-center gap-2"
+                        >
+                            {isPending && <Loader2 className="h-5 w-5 animate-spin" />}
+                            Registrar Líder
+                        </button>
                     </div>
                 </form>
             </div>

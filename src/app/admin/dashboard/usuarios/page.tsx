@@ -127,18 +127,18 @@ export default function GestionUsuarios() {
             </div>
 
             {/* SECCIÓN 1: CREACIÓN DE USUARIOS CON ROL DINÁMICO */}
-            <div className="bg-white p-8 rounded-2xl shadow-sm border border-gray-100 space-y-6">
+            <div className="bg-white p-6 md:p-8 rounded-2xl shadow-sm border border-gray-100 space-y-6">
                 <div className="flex items-center gap-3 border-b border-gray-100 pb-4">
                     <div className="p-2 bg-blue-50 rounded-lg">
                         <Shield className="h-6 w-6 text-blue-600" />
                     </div>
                     <div>
                         <h2 className="text-xl font-bold text-slate-900">Registrar Nuevo Usuario</h2>
-                        <p className="text-sm text-slate-500">Selecciona el rol adecuado para definir los permisos del usuario.</p>
+                        <p className="text-sm text-slate-500">Selecciona el rol adecuado para definir los permisos.</p>
                     </div>
                 </div>
 
-                <form onSubmit={handleCreateAdmin} className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                <form onSubmit={handleCreateAdmin} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
                     <div className="space-y-2">
                         <label className="text-sm font-semibold text-slate-700">Nombre</label>
                         <input
@@ -208,7 +208,7 @@ export default function GestionUsuarios() {
                         />
                     </div>
                     {adminData.role !== "ADMIN" && (
-                        <div className="space-y-2 lg:col-span-1">
+                        <div className="space-y-2 sm:col-span-2 lg:col-span-1">
                             <label className="text-sm font-semibold text-blue-700">Líder Superior (Jerarquía)</label>
                             <select
                                 className="w-full p-3 border border-blue-200 rounded-xl bg-blue-50 focus:ring-2 focus:ring-blue-500 outline-none"
@@ -218,15 +218,10 @@ export default function GestionUsuarios() {
                             >
                                 <option value="">Sin Líder (Nivel Superior)</option>
                                 {users
-                                    .filter(u => u.role !== "ADMIN") // Ya filtrados pero por seguridad
+                                    .filter(u => u.role !== "ADMIN")
                                     .filter(u => {
-                                        // REGLAS DE NEGOCIO:
-                                        // 1. El activista no puede liderar a nadie
                                         if (u.role === "Activista") return false;
-
-                                        // 2. El comunitario solo puede ser líder del Activista
                                         if (u.role === "Comunitario" && adminData.role !== "Activista") return false;
-
                                         return true;
                                     })
                                     .map(u => (
@@ -236,7 +231,7 @@ export default function GestionUsuarios() {
                             </select>
                         </div>
                     )}
-                    <div className="flex items-end lg:col-span-3">
+                    <div className="flex items-end sm:col-span-2 lg:col-span-3">
                         <button
                             type="submit"
                             disabled={isPending}
@@ -250,28 +245,28 @@ export default function GestionUsuarios() {
             </div>
 
             {/* SECCIÓN 2: LÍDERES (ACCESO RÁPIDO CON UBICACIÓN) */}
-            <div className="bg-slate-900 p-8 rounded-2xl shadow-xl text-white flex flex-col md:flex-row justify-between items-center gap-6">
+            <div className="bg-slate-900 p-6 md:p-8 rounded-2xl shadow-xl text-white flex flex-col lg:flex-row justify-between items-center gap-6">
                 <div className="flex items-center gap-4">
                     <div className="p-3 bg-slate-800 rounded-2xl">
                         <UserPlus className="h-7 w-7 text-emerald-400" />
                     </div>
                     <div>
                         <h2 className="text-xl font-bold">Registro de Líderes por Ubicación</h2>
-                        <p className="text-slate-400 text-sm">Usa este acceso si el usuario requiere geolocalización fija.</p>
+                        <p className="text-slate-400 text-sm">Permite asignar territorio geográfico fijo.</p>
                     </div>
                 </div>
                 <Link
                     href="/admin/dashboard/nuevo-lider"
-                    className="bg-white text-slate-900 px-8 py-4 rounded-xl font-bold hover:bg-blue-50 transition-all flex items-center gap-2"
+                    className="w-full lg:w-auto bg-white text-slate-900 px-8 py-4 rounded-xl font-bold hover:bg-blue-50 transition-all flex justify-center items-center gap-2"
                 >
-                    Registrar con Geofence
+                    Registrar por Zona
                     <ArrowRight className="h-5 w-5" />
                 </Link>
             </div>
 
             {/* TABLA DE USUARIOS EXISTENTES */}
             <div className="bg-white shadow-sm border border-gray-100 rounded-2xl overflow-hidden">
-                <div className="px-6 py-5 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
+                <div className="px-6 py-5 border-b border-gray-100 bg-gray-50 flex justify-between items-center flex-wrap gap-4">
                     <h3 className="font-bold text-slate-900">Directorio de Personal (Base de Datos Real)</h3>
                 </div>
                 <div className="overflow-x-auto">
