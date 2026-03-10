@@ -10,6 +10,11 @@ export async function getUsers() {
                 role: true,
                 _count: {
                     select: { persons: true }
+                },
+                leaders: {
+                    include: {
+                        leader: true
+                    }
                 }
             },
             orderBy: {
@@ -56,15 +61,32 @@ export async function createUserAction(data: any) {
             }
         });
 
-        // 3. Si se proporcionó un líder superior, crear registro en la jerarquía
+        // 3. Si se proporcionó un líder superior, validar jerarquía y crear registro
         if (data.parentLeaderId) {
-            await prisma.userHierarchy.create({
-                data: {
-                    leaderId: parseInt(String(data.parentLeaderId)),
-                    subordinateId: newUser.id,
-                    level: 1 // Nivel relativo por defecto
-                }
+            const parentLeader = await prisma.user.findUnique({
+                where: { id: parseInt(String(data.parentLeaderId)) },
+                include: { role: true }
             });
+
+            if (parentLeader) {
+                // Validación 1: El activista no puede liderar a nadie
+                if (parentLeader.role.name === "Activista") {
+                    throw new Error("Un Activista no puede ser líder superior de nadie.");
+                }
+
+                // Validación 2: El comunitario solo puede ser líder del Activista
+                if (parentLeader.role.name === "Comunitario" && data.role !== "Activista") {
+                    throw new Error("Un Comunitario solo puede liderar a usuarios con rol de Activista.");
+                }
+
+                await prisma.userHierarchy.create({
+                    data: {
+                        leaderId: parentLeader.id,
+                        subordinateId: newUser.id,
+                        level: 1
+                    }
+                });
+            }
         }
 
         revalidatePath("/admin/dashboard/usuarios");
@@ -113,5 +135,98 @@ export async function getHierarchy() {
     } catch (error) {
         console.error("Error fetching hierarchy:", error);
         return [];
+    }
+}
+
+export async function updateUserAction(id: number, data: any) {
+    try {
+        const role = await prisma.role.findUnique({
+            where: { name: data.role }
+        });
+
+        if (!role) throw new Error(`Role ${data.role} not found`);
+
+        // 1. Actualizar info básica
+        await prisma.user.update({
+            where: { id },
+            data: {
+                name: data.name,
+                lastName: data.lastName,
+                email: data.email,
+                phone: data.phone,
+                roleId: role.id
+            }
+        });
+
+        // 2. Actualizar Jerarquía
+        if (data.parentLeaderId !== undefined) {
+            // Eliminar vínculos existentes como subordinado
+            await prisma.userHierarchy.deleteMany({
+                where: { subordinateId: id }
+            });
+
+            if (data.parentLeaderId) {
+                const parentId = parseInt(String(data.parentLeaderId));
+
+                // Evitar que el usuario sea su propio líder
+                if (parentId === id) throw new Error("Un usuario no puede ser su propio líder.");
+
+                const parentLeader = await prisma.user.findUnique({
+                    where: { id: parentId },
+                    include: { role: true }
+                });
+
+                if (parentLeader) {
+                    // Validaciones de Jerarquía
+                    if (parentLeader.role.name === "Activista") {
+                        throw new Error("Un Activista no puede ser líder superior de nadie.");
+                    }
+                    if (parentLeader.role.name === "Comunitario" && data.role !== "Activista") {
+                        throw new Error("Un Comunitario solo puede liderar a usuarios con rol de Activista.");
+                    }
+
+                    await prisma.userHierarchy.create({
+                        data: {
+                            leaderId: parentId,
+                            subordinateId: id,
+                            level: 1
+                        }
+                    });
+                }
+            }
+        }
+
+        revalidatePath("/admin/dashboard/usuarios");
+        revalidatePath("/admin/dashboard");
+        revalidatePath("/admin/dashboard/jerarquia");
+        return { success: true };
+    } catch (error: any) {
+        console.error("Error updating user:", error);
+        return { success: false, error: error.message };
+    }
+}
+
+export async function deleteUserAction(id: number) {
+    try {
+        // Eliminar vínculos de jerarquía primero
+        await prisma.userHierarchy.deleteMany({
+            where: {
+                OR: [
+                    { leaderId: id },
+                    { subordinateId: id }
+                ]
+            }
+        });
+
+        await prisma.user.delete({
+            where: { id }
+        });
+
+        revalidatePath("/admin/dashboard/usuarios");
+        revalidatePath("/admin/dashboard");
+        return { success: true };
+    } catch (error: any) {
+        console.error("Error deleting user:", error);
+        return { success: false, error: error.message };
     }
 }

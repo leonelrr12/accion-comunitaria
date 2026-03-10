@@ -2,9 +2,9 @@
 
 import { useState, useEffect, useTransition } from "react";
 import { useAppStore } from "@/lib/store";
-import { UserPlus, Shield, User as UserIcon, ArrowRight, Loader2 } from "lucide-react";
+import { UserPlus, Shield, User as UserIcon, ArrowRight, Loader2, Edit2, Trash2, X as CloseIcon } from "lucide-react";
 import Link from "next/link";
-import { getUsers, createUserAction } from "@/app/actions/users";
+import { getUsers, createUserAction, updateUserAction, deleteUserAction } from "@/app/actions/users";
 import { getRoles } from "@/app/actions/roles";
 
 export default function GestionUsuarios() {
@@ -18,42 +18,30 @@ export default function GestionUsuarios() {
 
     const [isPending, startTransition] = useTransition();
     const [isLoading, setIsLoading] = useState(true);
+    const [editingUser, setEditingUser] = useState<any | null>(null);
+
+    const refreshData = async () => {
+        const [dbUsers, dbRoles] = await Promise.all([
+            getUsers(),
+            getRoles()
+        ]);
+
+        const mappedUsers = dbUsers.map(u => ({
+            ...u,
+            role: u.role.name,
+            password: u.passwordHash,
+            createdAt: u.createdAt.toISOString(),
+            parentLeaderId: u.leaders && u.leaders.length > 0 ? String(u.leaders[0].leaderId) : ""
+        }));
+
+        setUsers(mappedUsers as any);
+        return mappedUsers;
+    };
 
     // Sync roles and users from DB on mount
     useEffect(() => {
-        const fetchData = async () => {
-            setIsLoading(true);
-            try {
-                const [dbUsers, dbRoles] = await Promise.all([
-                    getUsers(),
-                    getRoles()
-                ]);
-
-                // Map DB users to UI format (id as string if needed, role as string)
-                const mappedUsers = dbUsers.map(u => ({
-                    ...u,
-                    id: String(u.id),
-                    role: u.role.name,
-                    password: u.passwordHash,
-                    createdBy: u.createdBy ? String(u.createdBy) : undefined,
-                    createdAt: u.createdAt.toISOString()
-                }));
-
-                const mappedRoles = dbRoles.map(r => ({
-                    ...r,
-                    id: String(r.id),
-                    createdAt: r.createdAt.toISOString()
-                }));
-
-                setUsers(mappedUsers as any);
-                setRoles(mappedRoles as any);
-            } catch (err) {
-                console.error("Fetch failed:", err);
-            } finally {
-                setIsLoading(false);
-            }
-        };
-        fetchData();
+        setIsLoading(true);
+        refreshData().finally(() => setIsLoading(false));
     }, [setUsers, setRoles]);
 
     // Admin Creation State
@@ -77,22 +65,45 @@ export default function GestionUsuarios() {
             });
 
             if (result.success) {
-                // Refresh list
-                const dbUsers = await getUsers();
-                const mappedUsers = dbUsers.map(u => ({
-                    ...u,
-                    id: String(u.id),
-                    role: u.role.name,
-                    password: u.passwordHash,
-                    createdBy: u.createdBy ? String(u.createdBy) : undefined,
-                    createdAt: u.createdAt.toISOString()
-                }));
-                setUsers(mappedUsers as any);
-
+                await refreshData();
                 setAdminData({ name: "", lastName: "", email: "", password: "", phone: "", role: "ADMIN", parentLeaderId: "" });
                 alert("Usuario creado exitosamente");
             } else {
                 alert("Error al crear usuario: " + result.error);
+            }
+        });
+    };
+
+    const handleUpdateUser = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!editingUser) return;
+
+        const userId = typeof editingUser.id === 'string' ? parseInt(editingUser.id) : editingUser.id;
+
+        startTransition(async () => {
+            const result = await updateUserAction(userId, editingUser);
+            if (result.success) {
+                await refreshData();
+                setEditingUser(null);
+                alert("Usuario actualizado correctamente");
+            } else {
+                alert("Error: " + result.error);
+            }
+        });
+    };
+
+    const handleDeleteUser = (id: string | number) => {
+        if (!confirm("¿Estás seguro de eliminar este usuario? Se perderán sus vínculos jerárquicos.")) return;
+
+        const userId = typeof id === 'string' ? parseInt(id) : id;
+
+        startTransition(async () => {
+            const result = await deleteUserAction(userId);
+            if (result.success) {
+                await refreshData();
+                alert("Usuario eliminado");
+            } else {
+                alert("Error: " + result.error);
             }
         });
     };
@@ -206,9 +217,22 @@ export default function GestionUsuarios() {
                                 disabled={isPending}
                             >
                                 <option value="">Sin Líder (Nivel Superior)</option>
-                                {users.filter(u => u.role !== "ADMIN").map(u => (
-                                    <option key={u.id} value={u.id}>{u.name} {u.lastName} ({u.role})</option>
-                                ))}
+                                {users
+                                    .filter(u => u.role !== "ADMIN") // Ya filtrados pero por seguridad
+                                    .filter(u => {
+                                        // REGLAS DE NEGOCIO:
+                                        // 1. El activista no puede liderar a nadie
+                                        if (u.role === "Activista") return false;
+
+                                        // 2. El comunitario solo puede ser líder del Activista
+                                        if (u.role === "Comunitario" && adminData.role !== "Activista") return false;
+
+                                        return true;
+                                    })
+                                    .map(u => (
+                                        <option key={u.id} value={u.id}>{u.name} {u.lastName} ({u.role})</option>
+                                    ))
+                                }
                             </select>
                         </div>
                     )}
@@ -258,6 +282,7 @@ export default function GestionUsuarios() {
                                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Perfil / Rol</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Email</th>
                                 <th className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Registrado por</th>
+                                <th className="px-6 py-4 text-center text-xs font-bold text-slate-500 uppercase tracking-wider">Acciones</th>
                             </tr>
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-100">
@@ -281,12 +306,28 @@ export default function GestionUsuarios() {
                                         <td className="px-6 py-4 whitespace-nowrap text-[11px] text-slate-500">
                                             {creator ? `${creator.name} ${creator.lastName}` : "SISTEMA"}
                                         </td>
+                                        <td className="px-6 py-4 whitespace-nowrap text-center space-x-2">
+                                            <button
+                                                onClick={() => setEditingUser(user)}
+                                                className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
+                                                title="Editar Jerarquía"
+                                            >
+                                                <Edit2 className="h-4 w-4" />
+                                            </button>
+                                            <button
+                                                onClick={() => handleDeleteUser(user.id)}
+                                                className="p-2 text-red-600 hover:bg-red-50 rounded-lg transition-colors"
+                                                title="Eliminar Usuario"
+                                            >
+                                                <Trash2 className="h-4 w-4" />
+                                            </button>
+                                        </td>
                                     </tr>
                                 );
                             })}
                             {users.length === 0 && (
                                 <tr>
-                                    <td colSpan={4} className="px-6 py-10 text-center text-slate-500">
+                                    <td colSpan={5} className="px-6 py-10 text-center text-slate-500">
                                         No hay usuarios registrados en la base de datos.
                                     </td>
                                 </tr>
@@ -295,6 +336,100 @@ export default function GestionUsuarios() {
                     </table>
                 </div>
             </div>
+
+            {/* MODAL DE EDICIÓN */}
+            {editingUser && (
+                <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden border border-gray-100">
+                        <div className="px-8 py-6 bg-slate-50 border-b border-gray-100 flex justify-between items-center">
+                            <div>
+                                <h2 className="text-xl font-black text-slate-900">Editar Usuario</h2>
+                                <p className="text-xs text-slate-400">Modifica accesos y posición en la jerarquía.</p>
+                            </div>
+                            <button onClick={() => setEditingUser(null)} className="p-2 hover:bg-gray-200 rounded-full transition-colors">
+                                <CloseIcon className="h-5 w-5 text-slate-500" />
+                            </button>
+                        </div>
+
+                        <form onSubmit={handleUpdateUser} className="p-8 space-y-5">
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-slate-500">Nombre</label>
+                                    <input
+                                        type="text"
+                                        className="w-full p-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={editingUser.name}
+                                        onChange={(e) => setEditingUser({ ...editingUser, name: e.target.value })}
+                                    />
+                                </div>
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-slate-500">Apellido</label>
+                                    <input
+                                        type="text"
+                                        className="w-full p-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={editingUser.lastName}
+                                        onChange={(e) => setEditingUser({ ...editingUser, lastName: e.target.value })}
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="space-y-1">
+                                <label className="text-xs font-bold text-slate-500">Email</label>
+                                <input
+                                    type="email"
+                                    className="w-full p-3 bg-slate-50 border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                    value={editingUser.email}
+                                    onChange={(e) => setEditingUser({ ...editingUser, email: e.target.value })}
+                                />
+                            </div>
+
+                            <div className="grid grid-cols-2 gap-4">
+                                <div className="space-y-1">
+                                    <label className="text-xs font-bold text-slate-500">Perfil / Rol</label>
+                                    <select
+                                        className="w-full p-3 bg-white border border-gray-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                        value={editingUser.role}
+                                        onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
+                                    >
+                                        {roles.map(r => <option key={r.id} value={r.name}>{r.name}</option>)}
+                                    </select>
+                                </div>
+                                {editingUser.role !== "ADMIN" && (
+                                    <div className="space-y-1">
+                                        <label className="text-xs font-bold text-blue-700">Líder Superior</label>
+                                        <select
+                                            className="w-full p-3 bg-blue-50 border border-blue-200 rounded-xl focus:ring-2 focus:ring-blue-500 outline-none"
+                                            value={editingUser.parentLeaderId || ""}
+                                            onChange={(e) => setEditingUser({ ...editingUser, parentLeaderId: e.target.value })}
+                                        >
+                                            <option value="">Sin Líder (TOP)</option>
+                                            {users
+                                                .filter(u => u.id !== editingUser.id && u.role !== "ADMIN")
+                                                .filter(u => {
+                                                    if (u.role === "Activista") return false;
+                                                    if (u.role === "Comunitario" && editingUser.role !== "Activista") return false;
+                                                    return true;
+                                                })
+                                                .map(u => (
+                                                    <option key={u.id} value={u.id}>{u.name} {u.lastName}</option>
+                                                ))
+                                            }
+                                        </select>
+                                    </div>
+                                )}
+                            </div>
+
+                            <button
+                                type="submit"
+                                disabled={isPending}
+                                className="w-full bg-blue-600 text-white p-4 rounded-xl font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-200 flex justify-center items-center gap-2 disabled:opacity-50"
+                            >
+                                {isPending ? <Loader2 className="h-5 w-5 animate-spin" /> : "Guardar Cambios"}
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            )}
         </div>
     );
 }

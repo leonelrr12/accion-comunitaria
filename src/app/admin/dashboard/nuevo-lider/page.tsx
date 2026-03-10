@@ -141,9 +141,21 @@ export default function CrearLider() {
                                         onChange={(e) => setFormData({ ...formData, parentLeaderId: e.target.value })}
                                     >
                                         <option value="">Nivel Superior (Sin Padre)</option>
-                                        {availableLeaders.map(l => (
-                                            <option key={l.id} value={l.id}>{l.name} {l.lastName} ({l.role.name})</option>
-                                        ))}
+                                        {availableLeaders
+                                            .filter(l => {
+                                                // REGLAS DE NEGOCIO:
+                                                // 1. El activista no puede liderar a nadie
+                                                if (l.role.name === "Activista") return false;
+
+                                                // 2. El comunitario solo puede ser líder del Activista
+                                                if (l.role.name === "Comunitario" && formData.role !== "Activista") return false;
+
+                                                return true;
+                                            })
+                                            .map(l => (
+                                                <option key={l.id} value={l.id}>{l.name} {l.lastName} ({l.role.name})</option>
+                                            ))
+                                        }
                                     </select>
                                 </div>
                                 <div className="sm:col-span-3 border border-gray-100 rounded-xl p-4 bg-slate-50/50">
