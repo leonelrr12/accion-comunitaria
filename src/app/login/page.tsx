@@ -3,6 +3,8 @@
 import { useState, useEffect } from "react";
 import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
+import { loginAction } from "@/app/actions/auth";
+import { initialSetup } from "@/app/actions/setup";
 
 export default function Login() {
     const [email, setEmail] = useState("");
@@ -11,6 +13,13 @@ export default function Login() {
     const login = useAppStore((state) => state.login);
     const currentUser = useAppStore((state) => state.currentUser);
     const router = useRouter();
+
+    useEffect(() => {
+        const setup = async () => {
+            await initialSetup();
+        };
+        setup();
+    }, []);
 
     useEffect(() => {
         if (currentUser) {
@@ -22,12 +31,23 @@ export default function Login() {
         }
     }, [currentUser, router]);
 
-    const handleLogin = (e: React.FormEvent) => {
+    const setCurrentUser = useAppStore((state) => state.setCurrentUser);
+
+    const handleLogin = async (e: React.FormEvent) => {
         e.preventDefault();
         setError("");
-        const success = login(email, password);
-        if (!success) {
-            setError("Credenciales inválidas.");
+
+        try {
+            const result = await loginAction(email, password);
+            if (result.success && result.user) {
+                // Update zustand store
+                setCurrentUser(result.user as any);
+                // Navigation is handled by useEffect
+            } else {
+                setError(result.error || "Credenciales inválidas.");
+            }
+        } catch (err) {
+            setError("Ocurrió un error al intentar iniciar sesión.");
         }
     };
 

@@ -1,0 +1,130 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Province {
+  id        Int        @id @default(autoincrement())
+  name      String
+  createdAt DateTime   @default(now())
+  districts District[]
+  persons   Person[]
+  users     User[]
+
+  @@map("provinces")
+}
+
+model District {
+  id             Int             @id @default(autoincrement())
+  provinceId     Int
+  name           String
+  createdAt      DateTime        @default(now())
+  corregimientos Corregimiento[]
+  province       Province        @relation(fields: [provinceId], references: [id])
+  persons        Person[]
+  users          User[]
+
+  @@map("districts")
+}
+
+model Corregimiento {
+  id          Int         @id @default(autoincrement())
+  districtId  Int
+  name        String
+  createdAt   DateTime    @default(now())
+  communities Community[]
+  district    District    @relation(fields: [districtId], references: [id])
+  persons     Person[]
+  users       User[]
+
+  @@map("corregimientos")
+}
+
+model Community {
+  id              Int           @id @default(autoincrement())
+  corregimientoId Int
+  name            String
+  createdAt       DateTime      @default(now())
+  corregimiento   Corregimiento @relation(fields: [corregimientoId], references: [id])
+  persons         Person[]
+  users           User[]
+
+  @@map("communities")
+}
+
+model Role {
+  id          Int      @id @default(autoincrement())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  users       User[]
+
+  @@map("roles")
+}
+
+model User {
+  id              Int             @id @default(autoincrement())
+  roleId          Int
+  name            String
+  lastName        String
+  email           String          @unique
+  passwordHash    String
+  phone           String?
+  provinceId      Int?
+  districtId      Int?
+  corregimientoId Int?
+  communityId     Int?
+  inviteCode      String?         @unique
+  createdBy       Int?
+  createdAt       DateTime        @default(now())
+  persons         Person[]
+  subordinates    UserHierarchy[] @relation("LeaderRelation")
+  leaders         UserHierarchy[] @relation("SubordinateRelation")
+  community       Community?      @relation(fields: [communityId], references: [id])
+  corregimiento   Corregimiento?  @relation(fields: [corregimientoId], references: [id])
+  creator         User?           @relation("UserToCreator", fields: [createdBy], references: [id])
+  createdUsers    User[]          @relation("UserToCreator")
+  district        District?       @relation(fields: [districtId], references: [id])
+  province        Province?       @relation(fields: [provinceId], references: [id])
+  role            Role            @relation(fields: [roleId], references: [id])
+
+  @@map("users")
+}
+
+model UserHierarchy {
+  id            Int      @id @default(autoincrement())
+  leaderId      Int
+  subordinateId Int
+  level         Int      @default(1)
+  createdAt     DateTime @default(now())
+  leader        User     @relation("LeaderRelation", fields: [leaderId], references: [id])
+  subordinate   User     @relation("SubordinateRelation", fields: [subordinateId], references: [id])
+
+  @@unique([leaderId, subordinateId])
+  @@map("user_hierarchy")
+}
+
+model Person {
+  id              Int            @id @default(autoincrement())
+  leaderUserId    Int?
+  name            String
+  lastName        String
+  cedula          String         @unique
+  email           String?
+  phone           String?
+  provinceId      Int?
+  districtId      Int?
+  corregimientoId Int?
+  communityId     Int?
+  createdAt       DateTime       @default(now())
+  community       Community?     @relation(fields: [communityId], references: [id])
+  corregimiento   Corregimiento? @relation(fields: [corregimientoId], references: [id])
+  district        District?      @relation(fields: [districtId], references: [id])
+  leader          User?          @relation(fields: [leaderUserId], references: [id])
+  province        Province?      @relation(fields: [provinceId], references: [id])
+
+  @@map("persons")
+}

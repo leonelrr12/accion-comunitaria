@@ -1,25 +1,44 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { useAppStore } from "@/lib/store";
-import { Shield, Plus, Trash2, Edit2, Check, X, Info } from "lucide-react";
+import { Shield, Plus, Trash2, Edit2, Check, X, Info, Loader2 } from "lucide-react";
+import { getRoles, createRole, updateRoleAction, deleteRoleAction } from "@/app/actions/roles";
 
 export default function GestionRoles() {
-    const roles = useAppStore((state) => state.roles);
-    const addRole = useAppStore((state) => state.addRole);
-    const updateRole = useAppStore((state) => state.updateRole);
-    const deleteRole = useAppStore((state) => state.deleteRole);
+    const [roles, setRoles] = useState<any[]>([]);
+    const [isPending, startTransition] = useTransition();
+    const [loading, setLoading] = useState(true);
 
     const [isAdding, setIsAdding] = useState(false);
-    const [editingId, setEditingId] = useState<string | null>(null);
+    const [editingId, setEditingId] = useState<number | null>(null);
     const [newRole, setNewRole] = useState({ name: "", description: "" });
     const [editRole, setEditRole] = useState({ name: "", description: "" });
 
+    // Initial load from DB
+    useEffect(() => {
+        loadRoles();
+    }, []);
+
+    const loadRoles = async () => {
+        setLoading(true);
+        const data = await getRoles();
+        setRoles(data);
+        setLoading(false);
+    };
+
     const handleAdd = (e: React.FormEvent) => {
         e.preventDefault();
-        addRole(newRole);
-        setNewRole({ name: "", description: "" });
-        setIsAdding(false);
+        startTransition(async () => {
+            const result = await createRole(newRole);
+            if (result.success) {
+                await loadRoles();
+                setNewRole({ name: "", description: "" });
+                setIsAdding(false);
+            } else {
+                alert(result.error);
+            }
+        });
     };
 
     const startEdit = (role: any) => {
@@ -27,10 +46,39 @@ export default function GestionRoles() {
         setEditRole({ name: role.name, description: role.description });
     };
 
-    const handleUpdate = (id: string) => {
-        updateRole(id, editRole);
-        setEditingId(null);
+    const handleUpdate = (id: number) => {
+        startTransition(async () => {
+            const result = await updateRoleAction(id, editRole);
+            if (result.success) {
+                await loadRoles();
+                setEditingId(null);
+            } else {
+                alert(result.error);
+            }
+        });
     };
+
+    const handleDelete = (id: number) => {
+        if (!confirm("¿Seguro que quieres eliminar este rol?")) return;
+
+        startTransition(async () => {
+            const result = await deleteRoleAction(id);
+            if (result.success) {
+                await loadRoles();
+            } else {
+                alert(result.error);
+            }
+        });
+    };
+
+    if (loading) {
+        return (
+            <div className="flex flex-col items-center justify-center h-96 space-y-4">
+                <Loader2 className="h-10 w-10 text-indigo-600 animate-spin" />
+                <p className="text-slate-500 font-medium">Cargando roles del sistema...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-6xl mx-auto space-y-8">
@@ -40,7 +88,7 @@ export default function GestionRoles() {
                         <Shield className="h-8 w-8 text-indigo-600" />
                         Configuración de Roles
                     </h1>
-                    <p className="text-slate-500 mt-1">Define los niveles de acceso y perfiles del sistema.</p>
+                    <p className="text-slate-500 mt-1">Define los niveles de acceso y perfiles del sistema real.</p>
                 </div>
                 <button
                     onClick={() => setIsAdding(true)}
@@ -87,9 +135,10 @@ export default function GestionRoles() {
                             </button>
                             <button
                                 type="submit"
-                                className="px-8 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-50"
+                                disabled={isPending}
+                                className="px-8 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-50 disabled:opacity-50"
                             >
-                                Guardar Rol
+                                {isPending ? "Guardando..." : "Guardar Rol"}
                             </button>
                         </div>
                     </form>
@@ -118,7 +167,11 @@ export default function GestionRoles() {
                                     <button onClick={() => setEditingId(null)} className="p-2 text-slate-400 hover:text-slate-600">
                                         <X className="h-4 w-4" />
                                     </button>
-                                    <button onClick={() => handleUpdate(role.id)} className="p-2 text-indigo-600 hover:text-indigo-800">
+                                    <button
+                                        onClick={() => handleUpdate(role.id)}
+                                        disabled={isPending}
+                                        className="p-2 text-indigo-600 hover:text-indigo-800 disabled:opacity-50"
+                                    >
                                         <Check className="h-4 w-4" />
                                     </button>
                                 </div>
@@ -133,7 +186,7 @@ export default function GestionRoles() {
                                         <button onClick={() => startEdit(role)} className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-lg transition-colors">
                                             <Edit2 className="h-4 w-4" />
                                         </button>
-                                        <button onClick={() => deleteRole(role.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                                        <button onClick={() => handleDelete(role.id)} className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
                                             <Trash2 className="h-4 w-4" />
                                         </button>
                                     </div>
@@ -146,7 +199,7 @@ export default function GestionRoles() {
                                 </p>
                                 <div className="mt-4 pt-4 border-t border-slate-50 flex items-center gap-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                                     <Info className="h-3 w-3" />
-                                    ID: {role.id}
+                                    DB ID: {role.id}
                                 </div>
                             </>
                         )}

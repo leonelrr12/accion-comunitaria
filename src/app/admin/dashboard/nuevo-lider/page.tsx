@@ -1,13 +1,15 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useTransition } from "react";
 import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { LocationSelector } from "@/components/ui/LocationSelector";
+import { createUserAction } from "@/app/actions/users";
+import { Loader2, ArrowLeft } from "lucide-react";
 
 export default function CrearLider() {
-    const createLeader = useAppStore((state) => state.createLeader);
     const router = useRouter();
+    const [isPending, startTransition] = useTransition();
 
     const [formData, setFormData] = useState({
         name: "",
@@ -18,6 +20,7 @@ export default function CrearLider() {
         districtId: "",
         corregimientoId: "",
         communityId: "",
+        role: "Lider de Zona" // Role por defecto para esta vista
     });
 
     const currentUser = useAppStore((state) => state.currentUser);
@@ -31,19 +34,38 @@ export default function CrearLider() {
             return;
         }
 
-        createLeader(formData, currentUser?.id);
-        router.push("/admin/dashboard/usuarios");
+        startTransition(async () => {
+            const result = await createUserAction({
+                ...formData,
+                createdBy: currentUser?.id
+            });
+
+            if (result.success) {
+                alert("Líder registrado correctamente en la base de datos");
+                router.push("/admin/dashboard/usuarios");
+            } else {
+                alert("Error: " + result.error);
+            }
+        });
     };
 
     return (
-        <div className="max-w-4xl mx-auto">
-            <div className="md:flex md:items-center md:justify-between mb-8">
+        <div className="max-w-4xl mx-auto space-y-8">
+            <button
+                onClick={() => router.back()}
+                className="flex items-center gap-2 text-slate-500 hover:text-slate-800 transition-colors font-semibold"
+            >
+                <ArrowLeft className="h-4 w-4" />
+                Volver
+            </button>
+
+            <div className="md:flex md:items-center md:justify-between">
                 <div className="flex-1 min-w-0">
                     <h2 className="text-2xl font-bold leading-7 text-slate-900 sm:text-3xl sm:truncate">
                         Registrar Nuevo Líder Geográfico
                     </h2>
                     <p className="mt-1 text-sm text-slate-500">
-                        Crea un usuario Líder y asígnale su sector. El Líder podrá entonces invitar afiliados a este mismo sector.
+                        Los datos se guardarán directamente en la base de datos real.
                     </p>
                 </div>
             </div>
@@ -58,6 +80,7 @@ export default function CrearLider() {
                                     <input
                                         type="text"
                                         required
+                                        disabled={isPending}
                                         className="appearance-none block w-full bg-white border border-gray-200 text-slate-900 rounded-lg py-2.5 px-3 leading-tight focus:outline-none focus:ring-2 focus:ring-slate-800 transition-colors shadow-sm"
                                         value={formData.name}
                                         onChange={(e) => setFormData({ ...formData, name: e.target.value })}
@@ -69,6 +92,7 @@ export default function CrearLider() {
                                     <input
                                         type="text"
                                         required
+                                        disabled={isPending}
                                         className="appearance-none block w-full bg-white border border-gray-200 text-slate-900 rounded-lg py-2.5 px-3 leading-tight focus:outline-none focus:ring-2 focus:ring-slate-800 transition-colors shadow-sm"
                                         value={formData.lastName}
                                         onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
@@ -80,6 +104,7 @@ export default function CrearLider() {
                                     <input
                                         type="email"
                                         required
+                                        disabled={isPending}
                                         className="appearance-none block w-full bg-white border border-gray-200 text-slate-900 rounded-lg py-2.5 px-3 leading-tight focus:outline-none focus:ring-2 focus:ring-slate-800 transition-colors shadow-sm"
                                         value={formData.email}
                                         onChange={(e) => setFormData({ ...formData, email: e.target.value })}
@@ -91,6 +116,7 @@ export default function CrearLider() {
                                     <input
                                         type="tel"
                                         required
+                                        disabled={isPending}
                                         className="appearance-none block w-full bg-white border border-gray-200 text-slate-900 rounded-lg py-2.5 px-3 leading-tight focus:outline-none focus:ring-2 focus:ring-slate-800 transition-colors shadow-sm"
                                         value={formData.phone}
                                         onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
@@ -102,9 +128,9 @@ export default function CrearLider() {
 
                         <div className="pt-8">
                             <div>
-                                <h3 className="text-lg leading-6 font-semibold text-slate-900">Ubicación Geográfica Restringida</h3>
+                                <h3 className="text-lg leading-6 font-semibold text-slate-900">Ubicación Geográfica Real</h3>
                                 <p className="mt-1 text-sm text-slate-500 mb-6">
-                                    El territorio que asignes aquí será propagado obligatoriamente a todos los afiliados que este líder registre.
+                                    El territorio que asignes aquí proviene de la base de datos geográfica.
                                 </p>
                             </div>
                             <div className="bg-white p-6 rounded-xl border border-blue-100 shadow-sm shadow-blue-50">
@@ -117,6 +143,7 @@ export default function CrearLider() {
                                     setDistrictId={(val) => setFormData((prev) => ({ ...prev, districtId: val }))}
                                     setCorregimientoId={(val) => setFormData((prev) => ({ ...prev, corregimientoId: val }))}
                                     setCommunityId={(val) => setFormData((prev) => ({ ...prev, communityId: val }))}
+                                    disabled={isPending}
                                 />
                             </div>
                         </div>
@@ -133,9 +160,10 @@ export default function CrearLider() {
                             </button>
                             <button
                                 type="submit"
-                                className="inline-flex justify-center flex-1 sm:flex-none py-2.5 px-8 border border-transparent shadow-sm shadow-slate-900/20 text-sm font-medium rounded-xl text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-colors"
+                                disabled={isPending}
+                                className="inline-flex justify-center flex-1 sm:flex-none py-2.5 px-8 border border-transparent shadow-sm shadow-slate-900/20 text-sm font-medium rounded-xl text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-colors disabled:opacity-50"
                             >
-                                Registrar y Aprobar Líder
+                                {isPending ? <Loader2 className="h-5 w-5 animate-spin mr-2" /> : "Registrar y Aprobar Líder"}
                             </button>
                         </div>
                     </div>

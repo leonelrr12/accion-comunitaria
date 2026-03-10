@@ -1,14 +1,15 @@
 import { create } from "zustand";
 import { persist } from "zustand/middleware";
-import { User, Person, Role, initialUsers, initialPersons, initialRoles } from "@/data/mockDb";
+import { User, Person, Role } from "@/types";
 
 interface AppState {
     // Session
     currentUser: User | null;
+    setCurrentUser: (user: User | null) => void;
     login: (email: string, password: string) => boolean;
     logout: () => void;
-    createUser: (user: Omit<User, "id" | "createdAt" | "inviteCode">, creatorId?: string) => void;
-    createLeader: (user: Omit<User, "id" | "createdAt" | "inviteCode" | "role" | "password">, creatorId?: string) => void;
+    createUser: (user: Omit<User, "id" | "createdAt" | "inviteCode">, creatorId?: number) => void;
+    createLeader: (user: Omit<User, "id" | "createdAt" | "inviteCode" | "role" | "password">, creatorId?: number) => void;
 
     // Data State
     users: User[];
@@ -16,23 +17,29 @@ interface AppState {
     roles: Role[];
 
     // Actions
+    setUsers: (users: User[]) => void;
+    setRoles: (roles: Role[]) => void;
     addRole: (role: Omit<Role, "id" | "createdAt">) => void;
-    updateRole: (id: string, role: Partial<Omit<Role, "id" | "createdAt">>) => void;
-    deleteRole: (id: string) => void;
-    addPerson: (person: Omit<Person, "id" | "createdAt" | "leaderId">, leaderId: string) => void;
+    updateRole: (id: number, role: Partial<Omit<Role, "id" | "createdAt">>) => void;
+    deleteRole: (id: number) => void;
+    addPerson: (person: Omit<Person, "id" | "createdAt" | "leaderUserId">, leaderUserId: number) => void;
 }
 
 export const useAppStore = create<AppState>()(
     persist(
         (set) => ({
             currentUser: null,
-            users: initialUsers,
-            persons: initialPersons,
-            roles: initialRoles.length > 0 ? initialRoles : [], // Use initialRoles from DB
+            setCurrentUser: (user: User | null) => set({ currentUser: user }),
+            users: [],
+            persons: [],
+            roles: [],
+
+            setUsers: (users: User[]) => set({ users }),
+            setRoles: (roles: Role[]) => set({ roles }),
 
             login: (email, password) => {
                 let success = false;
-                set((state) => {
+                set((state: AppState) => {
                     const user = state.users.find((u) => u.email === email && u.password === password);
                     if (user) {
                         success = true;
@@ -46,11 +53,10 @@ export const useAppStore = create<AppState>()(
             logout: () => set({ currentUser: null }),
 
             createUser: (userData, creatorId) =>
-                set((state) => {
+                set((state: AppState) => {
                     const newUser: User = {
                         ...userData,
-                        id: `U${state.users.length + 1}`,
-                        // If it's a leader role, we might want an invite code
+                        id: state.users.length + 1,
                         inviteCode: userData.role !== "ADMIN" ? `${userData.name.toUpperCase()}${state.users.length + 1}` : undefined,
                         createdBy: creatorId,
                         createdAt: new Date().toISOString(),
@@ -61,11 +67,11 @@ export const useAppStore = create<AppState>()(
                 }),
 
             createLeader: (userData, creatorId) =>
-                set((state) => {
+                set((state: AppState) => {
                     const newUser: User = {
                         ...userData,
-                        id: `U${state.users.length + 1}`,
-                        role: "Lider de Zona", // Defaulting to one of the new roles
+                        id: state.users.length + 1,
+                        role: "Lider de Zona",
                         password: "leader123",
                         inviteCode: `${userData.name.toUpperCase()}${state.users.length + 1}`,
                         createdBy: creatorId,
@@ -77,33 +83,33 @@ export const useAppStore = create<AppState>()(
                 }),
 
             addRole: (roleData) =>
-                set((state) => ({
+                set((state: AppState) => ({
                     roles: [
                         ...state.roles,
                         {
                             ...roleData,
-                            id: `R${state.roles.length + 1}`,
+                            id: state.roles.length + 1,
                             createdAt: new Date().toISOString(),
                         },
                     ],
                 })),
 
             updateRole: (id, roleData) =>
-                set((state) => ({
+                set((state: AppState) => ({
                     roles: state.roles.map((r) => (r.id === id ? { ...r, ...roleData } : r)),
                 })),
 
             deleteRole: (id) =>
-                set((state) => ({
+                set((state: AppState) => ({
                     roles: state.roles.filter((r) => r.id !== id),
                 })),
 
-            addPerson: (personData, leaderId) =>
-                set((state) => {
+            addPerson: (personData, leaderUserId) =>
+                set((state: AppState) => {
                     const newPerson: Person = {
                         ...personData,
-                        id: `PER${state.persons.length + 1}`,
-                        leaderId,
+                        id: state.persons.length + 1,
+                        leaderUserId,
                         createdAt: new Date().toISOString(),
                     };
                     return {
@@ -112,7 +118,7 @@ export const useAppStore = create<AppState>()(
                 }),
         }),
         {
-            name: "accion-comunitaria-storage", // persist data in local storage
+            name: "accion-comunitaria-storage",
         }
     )
 );

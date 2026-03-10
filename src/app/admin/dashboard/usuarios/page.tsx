@@ -1,15 +1,60 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useTransition } from "react";
 import { useAppStore } from "@/lib/store";
-import { UserPlus, Shield, User as UserIcon, ArrowRight } from "lucide-react";
+import { UserPlus, Shield, User as UserIcon, ArrowRight, Loader2 } from "lucide-react";
 import Link from "next/link";
+import { getUsers, createUserAction } from "@/app/actions/users";
+import { getRoles } from "@/app/actions/roles";
 
 export default function GestionUsuarios() {
+    // We still use the store's state for the UI, but we'll sync it with the DB
     const users = useAppStore((state) => state.users);
     const roles = useAppStore((state) => state.roles);
     const currentUser = useAppStore((state) => state.currentUser);
-    const createUser = useAppStore((state) => state.createUser);
+
+    const setUsers = useAppStore((state) => state.setUsers);
+    const setRoles = useAppStore((state) => state.setRoles);
+
+    const [isPending, startTransition] = useTransition();
+    const [isLoading, setIsLoading] = useState(true);
+
+    // Sync roles and users from DB on mount
+    useEffect(() => {
+        const fetchData = async () => {
+            setIsLoading(true);
+            try {
+                const [dbUsers, dbRoles] = await Promise.all([
+                    getUsers(),
+                    getRoles()
+                ]);
+
+                // Map DB users to UI format (id as string if needed, role as string)
+                const mappedUsers = dbUsers.map(u => ({
+                    ...u,
+                    id: String(u.id),
+                    role: u.role.name,
+                    password: u.passwordHash,
+                    createdBy: u.createdBy ? String(u.createdBy) : undefined,
+                    createdAt: u.createdAt.toISOString()
+                }));
+
+                const mappedRoles = dbRoles.map(r => ({
+                    ...r,
+                    id: String(r.id),
+                    createdAt: r.createdAt.toISOString()
+                }));
+
+                setUsers(mappedUsers as any);
+                setRoles(mappedRoles as any);
+            } catch (err) {
+                console.error("Fetch failed:", err);
+            } finally {
+                setIsLoading(false);
+            }
+        };
+        fetchData();
+    }, [setUsers, setRoles]);
 
     // Admin Creation State
     const [adminData, setAdminData] = useState({
@@ -18,15 +63,47 @@ export default function GestionUsuarios() {
         email: "",
         password: "",
         phone: "",
-        role: "ADMIN" // Default starting role
+        role: "ADMIN"
     });
 
     const handleCreateAdmin = (e: React.FormEvent) => {
         e.preventDefault();
-        createUser({ ...adminData }, currentUser?.id);
-        setAdminData({ name: "", lastName: "", email: "", password: "", phone: "", role: "ADMIN" });
-        alert("Usuario creado exitosamente");
+
+        startTransition(async () => {
+            const result = await createUserAction({
+                ...adminData,
+                createdBy: currentUser?.id
+            });
+
+            if (result.success) {
+                // Refresh list
+                const dbUsers = await getUsers();
+                const mappedUsers = dbUsers.map(u => ({
+                    ...u,
+                    id: String(u.id),
+                    role: u.role.name,
+                    password: u.passwordHash,
+                    createdBy: u.createdBy ? String(u.createdBy) : undefined,
+                    createdAt: u.createdAt.toISOString()
+                }));
+                setUsers(mappedUsers as any);
+
+                setAdminData({ name: "", lastName: "", email: "", password: "", phone: "", role: "ADMIN" });
+                alert("Usuario creado exitosamente");
+            } else {
+                alert("Error al crear usuario: " + result.error);
+            }
+        });
     };
+
+    if (isLoading) {
+        return (
+            <div className="flex flex-col items-center justify-center h-64 space-y-4">
+                <Loader2 className="h-10 w-10 text-blue-600 animate-spin" />
+                <p className="text-slate-500 font-medium">Cargando directorio de usuarios...</p>
+            </div>
+        );
+    }
 
     return (
         <div className="max-w-6xl mx-auto space-y-10">
@@ -55,7 +132,8 @@ export default function GestionUsuarios() {
                         <input
                             type="text"
                             required
-                            className="w-full p-3 border border-gray-200 rounded-xl bg-slate-50"
+                            disabled={isPending}
+                            className="w-full p-3 border border-gray-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none"
                             value={adminData.name}
                             onChange={(e) => setAdminData({ ...adminData, name: e.target.value })}
                         />
@@ -65,7 +143,8 @@ export default function GestionUsuarios() {
                         <input
                             type="text"
                             required
-                            className="w-full p-3 border border-gray-200 rounded-xl bg-slate-50"
+                            disabled={isPending}
+                            className="w-full p-3 border border-gray-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none"
                             value={adminData.lastName}
                             onChange={(e) => setAdminData({ ...adminData, lastName: e.target.value })}
                         />
@@ -75,7 +154,8 @@ export default function GestionUsuarios() {
                         <input
                             type="email"
                             required
-                            className="w-full p-3 border border-gray-200 rounded-xl bg-slate-50"
+                            disabled={isPending}
+                            className="w-full p-3 border border-gray-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none"
                             value={adminData.email}
                             onChange={(e) => setAdminData({ ...adminData, email: e.target.value })}
                         />
@@ -85,7 +165,8 @@ export default function GestionUsuarios() {
                         <input
                             type="password"
                             required
-                            className="w-full p-3 border border-gray-200 rounded-xl bg-slate-50"
+                            disabled={isPending}
+                            className="w-full p-3 border border-gray-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none"
                             value={adminData.password}
                             onChange={(e) => setAdminData({ ...adminData, password: e.target.value })}
                         />
@@ -94,7 +175,8 @@ export default function GestionUsuarios() {
                         <label className="text-sm font-semibold text-slate-700">Rol del Usuario</label>
                         <select
                             required
-                            className="w-full p-3 border border-gray-200 rounded-xl bg-white"
+                            disabled={isPending}
+                            className="w-full p-3 border border-gray-200 rounded-xl bg-white focus:ring-2 focus:ring-blue-500 outline-none"
                             value={adminData.role}
                             onChange={(e) => setAdminData({ ...adminData, role: e.target.value })}
                         >
@@ -107,13 +189,19 @@ export default function GestionUsuarios() {
                         <label className="text-sm font-semibold text-slate-700">Teléfono</label>
                         <input
                             type="tel"
-                            className="w-full p-3 border border-gray-200 rounded-xl bg-slate-50"
+                            disabled={isPending}
+                            className="w-full p-3 border border-gray-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none"
                             value={adminData.phone}
                             onChange={(e) => setAdminData({ ...adminData, phone: e.target.value })}
                         />
                     </div>
                     <div className="flex items-end lg:col-span-3">
-                        <button type="submit" className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg">
+                        <button
+                            type="submit"
+                            disabled={isPending}
+                            className="w-full bg-blue-600 text-white p-4 rounded-xl font-bold hover:bg-blue-700 transition-all shadow-lg flex justify-center items-center gap-2 disabled:opacity-70"
+                        >
+                            {isPending && <Loader2 className="h-5 w-5 animate-spin" />}
                             Registrar y Asignar Rol
                         </button>
                     </div>
@@ -143,7 +231,7 @@ export default function GestionUsuarios() {
             {/* TABLA DE USUARIOS EXISTENTES */}
             <div className="bg-white shadow-sm border border-gray-100 rounded-2xl overflow-hidden">
                 <div className="px-6 py-5 border-b border-gray-100 bg-gray-50 flex justify-between items-center">
-                    <h3 className="font-bold text-slate-900">Directorio de Personal</h3>
+                    <h3 className="font-bold text-slate-900">Directorio de Personal (Base de Datos Real)</h3>
                 </div>
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
@@ -179,6 +267,13 @@ export default function GestionUsuarios() {
                                     </tr>
                                 );
                             })}
+                            {users.length === 0 && (
+                                <tr>
+                                    <td colSpan={4} className="px-6 py-10 text-center text-slate-500">
+                                        No hay usuarios registrados en la base de datos.
+                                    </td>
+                                </tr>
+                            )}
                         </tbody>
                     </table>
                 </div>

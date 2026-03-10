@@ -1,7 +1,13 @@
 "use client";
 
-import { useMemo } from "react";
-import { panamaGeography } from "@/data/geography";
+import { useState, useEffect } from "react";
+import {
+    getProvinces,
+    getDistricts,
+    getCorregimientos,
+    getCommunities
+} from "@/app/actions/geography";
+import { Loader2 } from "lucide-react";
 
 interface LocationSelectorProps {
     provinceId: string;
@@ -26,21 +32,60 @@ export function LocationSelector({
     setCommunityId,
     disabled = false,
 }: LocationSelectorProps) {
-    const provinces = panamaGeography;
+    const [provinces, setProvinces] = useState<any[]>([]);
+    const [districts, setDistricts] = useState<any[]>([]);
+    const [corregimientos, setCorregimientos] = useState<any[]>([]);
+    const [communities, setCommunities] = useState<any[]>([]);
 
-    const districts = useMemo(() => {
-        return provinces.find((p) => p.id === provinceId)?.districts || [];
-    }, [provinceId, provinces]);
+    const [loading, setLoading] = useState(false);
 
-    const corregimientos = useMemo(() => {
-        return districts.find((d) => d.id === districtId)?.corregimientos || [];
-    }, [districtId, districts]);
+    // Fetch Provinces on mount
+    useEffect(() => {
+        const fetchInitial = async () => {
+            const data = await getProvinces();
+            setProvinces(data);
+        };
+        fetchInitial();
+    }, []);
 
-    const communities = useMemo(() => {
-        return (
-            corregimientos.find((c) => c.id === corregimientoId)?.communities || []
-        );
-    }, [corregimientoId, corregimientos]);
+    // Fetch Districts when Province changes
+    useEffect(() => {
+        if (provinceId) {
+            const fetchDistricts = async () => {
+                const data = await getDistricts(parseInt(provinceId));
+                setDistricts(data);
+            };
+            fetchDistricts();
+        } else {
+            setDistricts([]);
+        }
+    }, [provinceId]);
+
+    // Fetch Corregimientos when District changes
+    useEffect(() => {
+        if (districtId) {
+            const fetchCor = async () => {
+                const data = await getCorregimientos(parseInt(districtId));
+                setCorregimientos(data);
+            };
+            fetchCor();
+        } else {
+            setCorregimientos([]);
+        }
+    }, [districtId]);
+
+    // Fetch Communities when Corregimiento changes
+    useEffect(() => {
+        if (corregimientoId) {
+            const fetchCom = async () => {
+                const data = await getCommunities(parseInt(corregimientoId));
+                setCommunities(data);
+            };
+            fetchCom();
+        } else {
+            setCommunities([]);
+        }
+    }, [corregimientoId]);
 
     return (
         <div className="space-y-6">
@@ -64,16 +109,13 @@ export function LocationSelector({
                             }}
                             className="appearance-none block w-full bg-white border border-gray-200 text-gray-900 rounded-xl py-3 px-4 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm disabled:bg-gray-50 disabled:text-gray-400 hover:border-blue-400 group-disabled:hover:border-gray-200"
                         >
-                            <option value="" disabled>Seleccione una provincia...</option>
+                            <option value="">Seleccione una provincia...</option>
                             {provinces.map((p) => (
                                 <option key={p.id} value={p.id}>
                                     {p.name}
                                 </option>
                             ))}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500 group-hover:text-blue-500 transition-colors">
-                            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
-                        </div>
                     </div>
                 </div>
 
@@ -95,16 +137,13 @@ export function LocationSelector({
                             }}
                             className="appearance-none block w-full bg-white border border-gray-200 text-gray-900 rounded-xl py-3 px-4 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm disabled:bg-gray-50 disabled:text-gray-400 hover:border-blue-400 group-disabled:hover:border-gray-200"
                         >
-                            <option value="" disabled>Seleccione un distrito...</option>
+                            <option value="">Seleccione un distrito...</option>
                             {districts.map((d) => (
                                 <option key={d.id} value={d.id}>
                                     {d.name}
                                 </option>
                             ))}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500 group-hover:text-blue-500 transition-colors">
-                            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
-                        </div>
                     </div>
                 </div>
 
@@ -125,16 +164,13 @@ export function LocationSelector({
                             }}
                             className="appearance-none block w-full bg-white border border-gray-200 text-gray-900 rounded-xl py-3 px-4 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm disabled:bg-gray-50 disabled:text-gray-400 hover:border-blue-400 group-disabled:hover:border-gray-200"
                         >
-                            <option value="" disabled>Seleccione corregimiento...</option>
+                            <option value="">Seleccione corregimiento...</option>
                             {corregimientos.map((c) => (
                                 <option key={c.id} value={c.id}>
                                     {c.name}
                                 </option>
                             ))}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500 group-hover:text-blue-500 transition-colors">
-                            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
-                        </div>
                     </div>
                 </div>
 
@@ -152,16 +188,13 @@ export function LocationSelector({
                             onChange={(e) => setCommunityId(e.target.value)}
                             className="appearance-none block w-full bg-white border border-gray-200 text-gray-900 rounded-xl py-3 px-4 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm disabled:bg-gray-50 disabled:text-gray-400 hover:border-blue-400 group-disabled:hover:border-gray-200"
                         >
-                            <option value="" disabled>Seleccione comunidad...</option>
+                            <option value="">Seleccione comunidad...</option>
                             {communities.map((com) => (
                                 <option key={com.id} value={com.id}>
                                     {com.name}
                                 </option>
                             ))}
                         </select>
-                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-4 text-gray-500 group-hover:text-blue-500 transition-colors">
-                            <svg className="fill-current h-4 w-4" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20"><path d="M9.293 12.95l.707.707L15.657 8l-1.414-1.414L10 10.828 5.757 6.586 4.343 8z" /></svg>
-                        </div>
                     </div>
                 </div>
             </div>
