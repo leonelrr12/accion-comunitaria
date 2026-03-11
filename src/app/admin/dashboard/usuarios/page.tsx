@@ -4,6 +4,7 @@ import { useState, useEffect, useTransition } from "react";
 import { useAppStore } from "@/lib/store";
 import { UserPlus, Shield, User as UserIcon, ArrowRight, Loader2, Edit2, Trash2, X as CloseIcon } from "lucide-react";
 import Link from "next/link";
+import { toast } from "sonner";
 import { getUsers, createUserAction, updateUserAction, deleteUserAction } from "@/app/actions/users";
 import { getRoles } from "@/app/actions/roles";
 
@@ -67,9 +68,9 @@ export default function GestionUsuarios() {
             if (result.success) {
                 await refreshData();
                 setAdminData({ name: "", lastName: "", email: "", password: "", phone: "", role: "ADMIN", parentLeaderId: "" });
-                alert("Usuario creado exitosamente");
+                toast.success("Usuario creado exitosamente");
             } else {
-                alert("Error al crear usuario: " + result.error);
+                toast.error("Error al crear usuario: " + result.error);
             }
         });
     };
@@ -85,9 +86,9 @@ export default function GestionUsuarios() {
             if (result.success) {
                 await refreshData();
                 setEditingUser(null);
-                alert("Usuario actualizado correctamente");
+                toast.success("Usuario actualizado correctamente");
             } else {
-                alert("Error: " + result.error);
+                toast.error("Error: " + result.error);
             }
         });
     };
@@ -101,9 +102,9 @@ export default function GestionUsuarios() {
             const result = await deleteUserAction(userId);
             if (result.success) {
                 await refreshData();
-                alert("Usuario eliminado");
+                toast.success("Usuario eliminado");
             } else {
-                alert("Error: " + result.error);
+                toast.error("Error: " + result.error);
             }
         });
     };

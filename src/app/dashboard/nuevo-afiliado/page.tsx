@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { LocationSelector } from "@/components/ui/LocationSelector";
 import { createAffiliate } from "@/app/actions/affiliates";
 import { Loader2, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 
 export default function NuevoAfiliado() {
     const router = useRouter();
@@ -32,7 +33,7 @@ export default function NuevoAfiliado() {
         e.preventDefault();
 
         if (!formData.cedula) {
-            alert("La cédula es obligatoria.");
+            toast.warning("La cédula es obligatoria.");
             return;
         }
 
@@ -43,10 +44,10 @@ export default function NuevoAfiliado() {
             });
 
             if (result.success) {
-                alert("Afiliado guardado correctamente.");
+                toast.success("Afiliado guardado correctamente");
                 router.push("/dashboard/afiliados");
             } else {
-                alert("Error al guardar: " + result.error);
+                toast.error("Error al guardar: " + result.error);
             }
         });
     };

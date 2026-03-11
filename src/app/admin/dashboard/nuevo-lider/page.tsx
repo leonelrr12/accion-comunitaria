@@ -6,6 +6,7 @@ import { useRouter } from "next/navigation";
 import { LocationSelector } from "@/components/ui/LocationSelector";
 import { createUserAction, getUsers } from "@/app/actions/users";
 import { ArrowRight, Loader2, UserCircle, MapPin, Network, ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 
 export default function CrearLider() {
     const router = useRouter();
@@ -39,7 +40,7 @@ export default function CrearLider() {
 
         // Validation: Verify that location is fully selected
         if (!formData.provinceId || !formData.districtId || !formData.corregimientoId || !formData.communityId) {
-            alert("Por favor, completa toda la ubicación geográfica para el líder.");
+            toast.warning("Por favor, completa toda la ubicación geográfica para el líder.");
             return;
         }
 
@@ -50,10 +51,10 @@ export default function CrearLider() {
             });
 
             if (result.success) {
-                alert("Líder registrado correctamente en la base de datos");
+                toast.success("Líder registrado correctamente");
                 router.push("/admin/dashboard/usuarios");
             } else {
-                alert("Error: " + result.error);
+                toast.error("Error: " + result.error);
             }
         });
     };

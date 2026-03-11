@@ -4,6 +4,7 @@ import { useState, useEffect, useTransition } from "react";
 import { useAppStore } from "@/lib/store";
 import { Shield, Plus, Trash2, Edit2, Check, X, Info, Loader2 } from "lucide-react";
 import { getRoles, createRole, updateRoleAction, deleteRoleAction } from "@/app/actions/roles";
+import { toast } from "sonner";
 
 export default function GestionRoles() {
     const [roles, setRoles] = useState<any[]>([]);
@@ -35,8 +36,9 @@ export default function GestionRoles() {
                 await loadRoles();
                 setNewRole({ name: "", description: "" });
                 setIsAdding(false);
+                toast.success("Rol creado con éxito");
             } else {
-                alert(result.error);
+                toast.error(result.error);
             }
         });
     };
@@ -52,8 +54,9 @@ export default function GestionRoles() {
             if (result.success) {
                 await loadRoles();
                 setEditingId(null);
+                toast.success("Rol actualizado");
             } else {
-                alert(result.error);
+                toast.error(result.error);
             }
         });
     };
@@ -65,8 +68,9 @@ export default function GestionRoles() {
             const result = await deleteRoleAction(id);
             if (result.success) {
                 await loadRoles();
+                toast.success("Rol eliminado");
             } else {
-                alert(result.error);
+                toast.error(result.error);
             }
         });
     };
