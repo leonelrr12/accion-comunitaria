@@ -6,6 +6,7 @@ import { useState, useEffect } from "react";
 import { getAffiliates } from "@/app/actions/affiliates";
 
 export default function Dashboard() {
+
     const currentUser = useAppStore((state) => state.currentUser);
     const [myAffiliates, setMyAffiliates] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
@@ -28,8 +29,8 @@ export default function Dashboard() {
 
     const loadDashboardData = async () => {
         setLoading(true);
-        const data = await getAffiliates(currentUser?.id);
-        setMyAffiliates(data);
+        const data = await getAffiliates({ leaderUserId: currentUser?.id });
+        setMyAffiliates(data.data);
         setLoading(false);
     };
 
@@ -123,25 +124,26 @@ export default function Dashboard() {
                     </h3>
                 </div>
                 <div className="divide-y divide-slate-100">
-                    {myAffiliates.slice(0, 5).map((affiliate) => (
-                        <div key={affiliate.id} className="py-4 px-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
-                            <div className="flex items-center gap-3">
-                                <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
-                                    {affiliate.name.charAt(0)}
+                    {Array.isArray(myAffiliates) ? (
+                        myAffiliates.slice(0, 5).map((affiliate) => (
+                            <div key={affiliate.id} className="py-4 px-6 flex items-center justify-between hover:bg-slate-50 transition-colors">
+                                <div className="flex items-center gap-3">
+                                    <div className="h-10 w-10 rounded-full bg-blue-100 flex items-center justify-center text-blue-700 font-bold">
+                                        {affiliate.name.charAt(0)}
+                                    </div>
+                                    <div>
+                                        <p className="text-sm font-bold text-slate-900">{affiliate.name} {affiliate.lastName}</p>
+                                        <p className="text-xs text-slate-500">{affiliate.phone || affiliate.cedula}</p>
+                                    </div>
                                 </div>
-                                <div>
-                                    <p className="text-sm font-bold text-slate-900">{affiliate.name} {affiliate.lastName}</p>
-                                    <p className="text-xs text-slate-500">{affiliate.phone || affiliate.cedula}</p>
+                                <div className="text-right">
+                                    <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
+                                        {new Date(affiliate.createdAt).toLocaleDateString()}
+                                    </p>
                                 </div>
                             </div>
-                            <div className="text-right">
-                                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-tighter">
-                                    {new Date(affiliate.createdAt).toLocaleDateString()}
-                                </p>
-                            </div>
-                        </div>
-                    ))}
-                    {myAffiliates.length === 0 && (
+                        ))
+                    ) : (
                         <div className="py-12 px-6 text-center text-slate-500 text-sm font-medium">
                             Aún no tienes afiliados en tu red. ¡Empieza compartiendo tu link!
                         </div>
