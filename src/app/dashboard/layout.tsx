@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Users, LayoutDashboard, LogOut, Settings } from "lucide-react";
+import { logoutAction } from "@/app/actions/auth";
 
 export default function DashboardLayout({
     children,
@@ -78,7 +79,8 @@ export default function DashboardLayout({
                                 </p>
                                 <div
                                     className="text-xs font-medium text-red-600 hover:text-red-500 cursor-pointer flex items-center mt-1"
-                                    onClick={() => {
+                                    onClick={async () => {
+                                        await logoutAction();
                                         logout();
                                         router.push("/login");
                                     }}

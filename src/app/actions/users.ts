@@ -1,34 +1,68 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
+import type { CreateUserInput, UpdateUserInput } from "@/types";
 
-export async function getUsers() {
+interface GetUsersParams {
+    page?: number;
+    pageSize?: number;
+    search?: string;
+}
+
+export async function getUsers({ page = 1, pageSize = 10, search = "" }: GetUsersParams = {}) {
     try {
-        const users = await prisma.user.findMany({
-            include: {
-                role: true,
-                _count: {
-                    select: { persons: true }
-                },
-                leaders: {
-                    include: {
-                        leader: true
-                    }
-                }
-            },
-            orderBy: {
-                createdAt: 'desc'
+        const where = search
+            ? {
+                OR: [
+                    { name: { contains: search, mode: "insensitive" as const } },
+                    { lastName: { contains: search, mode: "insensitive" as const } },
+                    { email: { contains: search, mode: "insensitive" as const } },
+                ],
             }
-        });
-        return users;
+            : {};
+
+        const [users, total] = await Promise.all([
+            prisma.user.findMany({
+                where,
+                include: {
+                    role: true,
+                    _count: { select: { persons: true } },
+                    leaders: { include: { leader: true } },
+                },
+                orderBy: { createdAt: "desc" },
+                skip: (page - 1) * pageSize,
+                take: pageSize,
+            }),
+            prisma.user.count({ where }),
+        ]);
+
+        return { data: users, total, totalPages: Math.ceil(total / pageSize) };
     } catch (error) {
         console.error("Error fetching users:", error);
+        return { data: [], total: 0, totalPages: 0 };
+    }
+}
+
+/** Versión sin paginación para uso interno (dashboard stats, jerarquía, etc.) */
+export async function getAllUsers() {
+    try {
+        return await prisma.user.findMany({
+            include: {
+                role: true,
+                _count: { select: { persons: true } },
+                leaders: { include: { leader: true } },
+            },
+            orderBy: { createdAt: "desc" },
+        });
+    } catch (error) {
+        console.error("Error fetching all users:", error);
         return [];
     }
 }
 
-export async function createUserAction(data: any) {
+export async function createUserAction(data: CreateUserInput) {
     try {
         // Find role id from role name
         const role = await prisma.role.findUnique({
@@ -44,12 +78,15 @@ export async function createUserAction(data: any) {
             ? `${data.name.substring(0, 2).toUpperCase()}${Math.floor(1000 + Math.random() * 9000)}`
             : null;
 
+        const passwordToHash = data.password || "changeme123";
+        const passwordHash = await bcrypt.hash(passwordToHash, 12);
+
         const newUser = await prisma.user.create({
             data: {
                 name: data.name,
                 lastName: data.lastName,
                 email: data.email,
-                passwordHash: data.password || 'password123',
+                passwordHash,
                 phone: data.phone,
                 roleId: role.id,
                 createdBy: data.createdBy ? parseInt(String(data.createdBy)) : null,
@@ -138,7 +175,7 @@ export async function getHierarchy() {
     }
 }
 
-export async function updateUserAction(id: number, data: any) {
+export async function updateUserAction(id: number, data: UpdateUserInput) {
     try {
         const role = await prisma.role.findUnique({
             where: { name: data.role }

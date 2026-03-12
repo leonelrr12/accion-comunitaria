@@ -1,12 +1,18 @@
 "use client";
 
-import { useState, useEffect, useTransition } from "react";
+import { useState, useEffect, useTransition, useCallback } from "react";
 import { useAppStore } from "@/lib/store";
-import { UserPlus, Shield, User as UserIcon, ArrowRight, Loader2, Edit2, Trash2, X as CloseIcon } from "lucide-react";
+import { UserPlus, Shield, ArrowRight, Loader2, Edit2, Trash2, X as CloseIcon } from "lucide-react";
 import Link from "next/link";
 import { toast } from "sonner";
 import { getUsers, createUserAction, updateUserAction, deleteUserAction } from "@/app/actions/users";
 import { getRoles } from "@/app/actions/roles";
+import ConfirmDialog from "@/components/ui/ConfirmDialog";
+import SearchBar from "@/components/ui/SearchBar";
+import Pagination from "@/components/ui/Pagination";
+import { useDebounce } from "@/lib/useDebounce";
+import { mapUserFromDB } from "@/lib/mappers";
+import type { User, UpdateUserInput } from "@/types";
 
 export default function GestionUsuarios() {
     // We still use the store's state for the UI, but we'll sync it with the DB
@@ -19,31 +25,42 @@ export default function GestionUsuarios() {
 
     const [isPending, startTransition] = useTransition();
     const [isLoading, setIsLoading] = useState(true);
-    const [editingUser, setEditingUser] = useState<any | null>(null);
+    const [editingUser, setEditingUser] = useState<User | null>(null);
+    const [confirmDialog, setConfirmDialog] = useState<{ isOpen: boolean; userId: number | string | null }>({
+        isOpen: false,
+        userId: null,
+    });
 
-    const refreshData = async () => {
-        const [dbUsers, dbRoles] = await Promise.all([
-            getUsers(),
-            getRoles()
+    // Paginación y búsqueda
+    const [searchTerm, setSearchTerm] = useState("");
+    const [currentPage, setCurrentPage] = useState(1);
+    const [totalPages, setTotalPages] = useState(0);
+    const [totalUsers, setTotalUsers] = useState(0);
+    const PAGE_SIZE = 10;
+    const debouncedSearch = useDebounce(searchTerm, 350);
+
+    const refreshData = useCallback(async (page = currentPage, search = debouncedSearch) => {
+        const [result, dbRoles] = await Promise.all([
+            getUsers({ page, pageSize: PAGE_SIZE, search }),
+            getRoles(),
         ]);
 
-        const mappedUsers = dbUsers.map(u => ({
-            ...u,
-            role: u.role.name,
-            password: u.passwordHash,
-            createdAt: u.createdAt.toISOString(),
-            parentLeaderId: u.leaders && u.leaders.length > 0 ? String(u.leaders[0].leaderId) : ""
-        }));
+        const mappedUsers: User[] = result.data.map(mapUserFromDB);
 
-        setUsers(mappedUsers as any);
+        setUsers(mappedUsers);
+        setRoles(dbRoles as any);
+        setTotalPages(result.totalPages);
+        setTotalUsers(result.total);
         return mappedUsers;
-    };
+    }, [currentPage, debouncedSearch, setUsers, setRoles]);
 
-    // Sync roles and users from DB on mount
+    // Reset página al cambiar búsqueda
+    useEffect(() => { setCurrentPage(1); }, [debouncedSearch]);
+
     useEffect(() => {
         setIsLoading(true);
-        refreshData().finally(() => setIsLoading(false));
-    }, [setUsers, setRoles]);
+        refreshData(currentPage, debouncedSearch).finally(() => setIsLoading(false));
+    }, [currentPage, debouncedSearch]);
 
     // Admin Creation State
     const [adminData, setAdminData] = useState({
@@ -94,10 +111,15 @@ export default function GestionUsuarios() {
     };
 
     const handleDeleteUser = (id: string | number) => {
-        if (!confirm("¿Estás seguro de eliminar este usuario? Se perderán sus vínculos jerárquicos.")) return;
+        setConfirmDialog({ isOpen: true, userId: id });
+    };
+
+    const executeDelete = () => {
+        const id = confirmDialog.userId;
+        if (!id) return;
+        setConfirmDialog({ isOpen: false, userId: null });
 
         const userId = typeof id === 'string' ? parseInt(id) : id;
-
         startTransition(async () => {
             const result = await deleteUserAction(userId);
             if (result.success) {
@@ -266,9 +288,20 @@ export default function GestionUsuarios() {
             </div>
 
             {/* TABLA DE USUARIOS EXISTENTES */}
-            <div className="bg-white shadow-sm border border-gray-100 rounded-2xl overflow-hidden">
-                <div className="px-6 py-5 border-b border-gray-100 bg-gray-50 flex justify-between items-center flex-wrap gap-4">
-                    <h3 className="font-bold text-slate-900">Directorio de Personal (Base de Datos Real)</h3>
+            <div className="bg-white shadow-sm border border-gray-100 rounded-2xl overflow-hidden relative">
+                {isLoading && (
+                    <div className="absolute inset-0 bg-white/50 backdrop-blur-[1px] flex items-center justify-center z-10">
+                        <Loader2 className="h-8 w-8 text-blue-600 animate-spin" />
+                    </div>
+                )}
+                <div className="px-6 py-5 border-b border-gray-100 bg-gray-50 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
+                    <h3 className="font-bold text-slate-900">Directorio de Personal</h3>
+                    <SearchBar
+                        value={searchTerm}
+                        onChange={setSearchTerm}
+                        placeholder="Buscar por nombre, email..."
+                        className="w-full sm:w-80"
+                    />
                 </div>
                 <div className="overflow-x-auto">
                     <table className="min-w-full divide-y divide-gray-200">
@@ -321,16 +354,24 @@ export default function GestionUsuarios() {
                                     </tr>
                                 );
                             })}
-                            {users.length === 0 && (
+                            {users.length === 0 && !isLoading && (
                                 <tr>
-                                    <td colSpan={5} className="px-6 py-10 text-center text-slate-500">
-                                        No hay usuarios registrados en la base de datos.
+                                    <td colSpan={5} className="px-6 py-12 text-center text-slate-500">
+                                        {searchTerm ? `No se encontraron resultados para "${searchTerm}"` : "No hay usuarios registrados."}
                                     </td>
                                 </tr>
                             )}
                         </tbody>
                     </table>
                 </div>
+
+                <Pagination
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    totalItems={totalUsers}
+                    pageSize={PAGE_SIZE}
+                    onPageChange={setCurrentPage}
+                />
             </div>
 
             {/* MODAL DE EDICIÓN */}
@@ -426,6 +467,18 @@ export default function GestionUsuarios() {
                     </div>
                 </div>
             )}
+
+            {/* Diálogo de confirmación de eliminación */}
+            <ConfirmDialog
+                isOpen={confirmDialog.isOpen}
+                title="Eliminar usuario"
+                message="¿Estás seguro de eliminar este usuario? Se perderán todos sus vínculos jerárquicos y no podrá iniciar sesión."
+                confirmLabel="Sí, eliminar"
+                cancelLabel="Cancelar"
+                variant="danger"
+                onConfirm={executeDelete}
+                onCancel={() => setConfirmDialog({ isOpen: false, userId: null })}
+            />
         </div>
     );
 }

@@ -1,10 +1,11 @@
 "use server";
 
 import prisma from "@/lib/prisma";
+import bcrypt from "bcryptjs";
 
 export async function initialSetup() {
     try {
-        // 1. Create Roles
+        // 1. Crear Roles
         const roleData = [
             { name: "ADMIN", description: "Acceso total al sistema" },
             { name: "Lider Regional", description: "Coordinador de Provincia" },
@@ -23,26 +24,28 @@ export async function initialSetup() {
 
         const adminRole = await prisma.role.findUnique({ where: { name: "ADMIN" } });
 
-        // 2. Create Initial Admin
+        // 2. Crear Admin inicial con contraseña hasheada
         const adminEmail = "admin@example.com";
         const existingAdmin = await prisma.user.findUnique({ where: { email: adminEmail } });
 
         if (!existingAdmin && adminRole) {
+            const passwordHash = await bcrypt.hash("admin123", 12);
             await prisma.user.create({
                 data: {
                     name: "Admin",
                     lastName: "General",
                     email: adminEmail,
-                    passwordHash: "admin123", // In production hash this
+                    passwordHash,
                     roleId: adminRole.id,
                     inviteCode: "ADMIN001",
-                }
+                },
             });
         }
 
         return { success: true };
-    } catch (error: any) {
+    } catch (error: unknown) {
+        const message = error instanceof Error ? error.message : "Error desconocido";
         console.error("Setup failed:", error);
-        return { success: false, error: error.message };
+        return { success: false, error: message };
     }
 }

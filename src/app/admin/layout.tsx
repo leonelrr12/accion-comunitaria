@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Users, Shield, LogOut, ShieldCheck, BarChart3, MapPin, Network, Menu, X } from "lucide-react";
+import { logoutAction } from "@/app/actions/auth";
 
 export default function AdminLayout({
     children,
@@ -75,7 +76,8 @@ export default function AdminLayout({
                         </p>
                         <div
                             className="text-xs font-medium text-red-400 hover:text-red-300 cursor-pointer flex items-center mt-1 transition-colors"
-                            onClick={() => {
+                            onClick={async () => {
+                                await logoutAction();
                                 logout();
                                 router.push("/login");
                             }}
