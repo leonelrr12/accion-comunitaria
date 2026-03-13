@@ -129,9 +129,10 @@ export async function createUserAction(data: CreateUserInput) {
         revalidatePath("/admin/dashboard/usuarios");
         revalidatePath("/admin/dashboard");
         return { success: true, user: newUser };
-    } catch (error: any) {
+    } catch (error) {
         console.error("Error creating user:", error);
-        return { success: false, error: error.message };
+        const message = error instanceof Error ? error.message : "Error desconocido";
+        return { success: false, error: message };
     }
 }
 
@@ -237,9 +238,10 @@ export async function updateUserAction(id: number, data: UpdateUserInput) {
         revalidatePath("/admin/dashboard");
         revalidatePath("/admin/dashboard/jerarquia");
         return { success: true };
-    } catch (error: any) {
+    } catch (error) {
         console.error("Error updating user:", error);
-        return { success: false, error: error.message };
+        const message = error instanceof Error ? error.message : "Error desconocido";
+        return { success: false, error: message };
     }
 }
 
@@ -262,8 +264,9 @@ export async function deleteUserAction(id: number) {
         revalidatePath("/admin/dashboard/usuarios");
         revalidatePath("/admin/dashboard");
         return { success: true };
-    } catch (error: any) {
+    } catch (error) {
         console.error("Error deleting user:", error);
-        return { success: false, error: error.message };
+        const message = error instanceof Error ? error.message : "Error desconocido";
+        return { success: false, error: message };
     }
 }

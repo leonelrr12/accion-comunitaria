@@ -12,7 +12,7 @@ import SearchBar from "@/components/ui/SearchBar";
 import Pagination from "@/components/ui/Pagination";
 import { useDebounce } from "@/lib/useDebounce";
 import { mapUserFromDB } from "@/lib/mappers";
-import type { User, UpdateUserInput } from "@/types";
+import type { User } from "@/types";
 
 export default function GestionUsuarios() {
     // We still use the store's state for the UI, but we'll sync it with the DB
@@ -48,18 +48,21 @@ export default function GestionUsuarios() {
         const mappedUsers: User[] = result.data.map(mapUserFromDB);
 
         setUsers(mappedUsers);
-        setRoles(dbRoles as any);
+        setRoles(dbRoles);
         setTotalPages(result.totalPages);
         setTotalUsers(result.total);
         return mappedUsers;
-    }, [currentPage, debouncedSearch, setUsers, setRoles]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [currentPage, debouncedSearch]);
 
     // Reset página al cambiar búsqueda
     useEffect(() => { setCurrentPage(1); }, [debouncedSearch]);
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     useEffect(() => {
         setIsLoading(true);
         refreshData(currentPage, debouncedSearch).finally(() => setIsLoading(false));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, [currentPage, debouncedSearch]);
 
     // Admin Creation State

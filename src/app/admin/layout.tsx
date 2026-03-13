@@ -7,44 +7,23 @@ import Link from "next/link";
 import { Users, Shield, LogOut, ShieldCheck, BarChart3, MapPin, Network, Menu, X } from "lucide-react";
 import { logoutAction } from "@/app/actions/auth";
 
-export default function AdminLayout({
-    children,
+interface NavItem {
+    name: string;
+    href: string;
+    icon: React.ComponentType<{ className?: string }>;
+    color: string;
+}
+
+function SidebarContent({
+    navigation,
+    currentUser,
+    onLogout
 }: {
-    children: React.ReactNode;
+    navigation: NavItem[];
+    currentUser: { name: string; lastName: string };
+    onLogout: () => void;
 }) {
-    const currentUser = useAppStore((state) => state.currentUser);
-    const logout = useAppStore((state) => state.logout);
-    const router = useRouter();
-    const [mounted, setMounted] = useState(false);
-    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-
-    useEffect(() => {
-        setMounted(true);
-    }, []);
-
-    useEffect(() => {
-        if (mounted) {
-            if (!currentUser) {
-                router.push("/login");
-            } else if (currentUser.role !== "ADMIN") {
-                router.push("/dashboard");
-            }
-        }
-    }, [currentUser, mounted, router]);
-
-    if (!mounted || !currentUser || currentUser.role !== "ADMIN") {
-        return null;
-    }
-
-    const navigation = [
-        { name: 'Panel General', href: '/admin/dashboard', icon: BarChart3, color: 'group-hover:text-blue-400' },
-        { name: 'Configurar Roles/CRUD', href: '/admin/dashboard/roles', icon: Shield, color: 'group-hover:text-indigo-400' },
-        { name: 'Gestión de Usuarios', href: '/admin/dashboard/usuarios', icon: Users, color: 'group-hover:text-blue-400' },
-        { name: 'Estructura Geográfica', href: '/admin/dashboard/geografia', icon: MapPin, color: 'group-hover:text-emerald-400' },
-        { name: 'Jerarquía de Liderazgo', href: '/admin/dashboard/jerarquia', icon: Network, color: 'group-hover:text-blue-400' },
-    ];
-
-    const SidebarContent = () => (
+    return (
         <div className="h-full flex flex-col bg-slate-900">
             <div className="h-16 flex items-center px-6 border-b border-slate-800 bg-slate-950">
                 <ShieldCheck className="text-blue-500 mr-2 h-6 w-6" />
@@ -55,7 +34,6 @@ export default function AdminLayout({
                     <Link
                         key={item.name}
                         href={item.href}
-                        onClick={() => setIsMobileMenuOpen(false)}
                         className="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white group transition-colors"
                     >
                         <item.icon className={`mr-3 h-5 w-5 text-slate-400 ${item.color}`} />
@@ -76,11 +54,7 @@ export default function AdminLayout({
                         </p>
                         <div
                             className="text-xs font-medium text-red-400 hover:text-red-300 cursor-pointer flex items-center mt-1 transition-colors"
-                            onClick={async () => {
-                                await logoutAction();
-                                logout();
-                                router.push("/login");
-                            }}
+                            onClick={onLogout}
                         >
                             <LogOut className="mr-1.5 h-3.5 w-3.5" /> Cerrar Sesión
                         </div>
@@ -89,6 +63,51 @@ export default function AdminLayout({
             </div>
         </div>
     );
+}
+
+export default function AdminLayout({
+    children,
+}: {
+    children: React.ReactNode;
+}) {
+    const currentUser = useAppStore((state) => state.currentUser);
+    const logout = useAppStore((state) => state.logout);
+    const router = useRouter();
+    const [mounted, setMounted] = useState(false);
+    const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    useEffect(() => {
+        setMounted(true);
+    }, []);
+
+    useEffect(() => {
+        if (mounted) {
+            if (!currentUser) {
+                router.push("/login");
+            } else if (currentUser.role !== "ADMIN") {
+                router.push("/dashboard");
+            }
+        }
+    }, [currentUser, mounted, router]);
+
+    if (!mounted || !currentUser || currentUser.role !== "ADMIN") {
+        return null;
+    }
+
+    const navigation: NavItem[] = [
+        { name: 'Panel General', href: '/admin/dashboard', icon: BarChart3, color: 'group-hover:text-blue-400' },
+        { name: 'Configurar Roles/CRUD', href: '/admin/dashboard/roles', icon: Shield, color: 'group-hover:text-indigo-400' },
+        { name: 'Gestión de Usuarios', href: '/admin/dashboard/usuarios', icon: Users, color: 'group-hover:text-blue-400' },
+        { name: 'Estructura Geográfica', href: '/admin/dashboard/geografia', icon: MapPin, color: 'group-hover:text-emerald-400' },
+        { name: 'Jerarquía de Liderazgo', href: '/admin/dashboard/jerarquia', icon: Network, color: 'group-hover:text-blue-400' },
+    ];
+
+    const handleLogout = async () => {
+        await logoutAction();
+        logout();
+        router.push("/login");
+    };
 
     return (
         <div className="min-h-screen bg-slate-50 flex flex-col md:flex-row overflow-hidden">
@@ -111,14 +130,14 @@ export default function AdminLayout({
                 <div className="md:hidden fixed inset-0 z-[60] flex">
                     <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md" onClick={() => setIsMobileMenuOpen(false)}></div>
                     <aside className="relative w-[280px] bg-slate-900 text-white shadow-2xl h-full animate-in slide-in-from-left duration-300 border-r border-slate-800">
-                        <SidebarContent />
+                        <SidebarContent navigation={navigation} currentUser={currentUser} onLogout={handleLogout} />
                     </aside>
                 </div>
             )}
 
             {/* Desktop Sidebar */}
             <aside className="w-64 bg-slate-900 border-r border-slate-800 hidden md:block text-white sticky top-0 h-screen flex-shrink-0 shadow-xl">
-                <SidebarContent />
+                <SidebarContent navigation={navigation} currentUser={currentUser} onLogout={handleLogout} />
             </aside>
 
             {/* Main content */}

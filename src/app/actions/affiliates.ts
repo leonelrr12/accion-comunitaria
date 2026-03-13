@@ -90,8 +90,9 @@ export async function createAffiliate(data: AffiliateInput) {
         revalidatePath("/dashboard");
         revalidatePath("/admin/dashboard");
         return { success: true, person: newPerson };
-    } catch (error: any) {
+    } catch (error) {
         console.error("Error creating affiliate:", error);
-        return { success: false, error: error.message };
+        const message = error instanceof Error ? error.message : "Error desconocido";
+        return { success: false, error: message };
     }
 }

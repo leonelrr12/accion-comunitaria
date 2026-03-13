@@ -9,21 +9,40 @@ import {
     Map,
     Navigation,
     Locate,
-    Trash2,
     Loader2
 } from "lucide-react";
 import {
-    getProvinces, createProvince, deleteProvince,
+    getProvinces, createProvince,
     getDistricts, createDistrict,
     getCorregimientos, createCorregimiento,
     getCommunities, createCommunity
 } from "@/app/actions/geography";
 
+interface GeoItem {
+    id: number;
+    name: string;
+}
+
+interface GeoColumnProps {
+    title: string;
+    icon: React.ReactNode;
+    items: GeoItem[];
+    selectedId: number | null;
+    onSelect: (id: number) => void;
+    onAdd: () => void;
+    inputValue: string;
+    setInputValue: (value: string) => void;
+    isPending: boolean;
+    type: 'province' | 'district' | 'corregimiento' | 'community';
+    active: boolean;
+    placeholder?: string;
+}
+
 export default function GeografiaCRUD() {
-    const [provinces, setProvinces] = useState<any[]>([]);
-    const [districts, setDistricts] = useState<any[]>([]);
-    const [corregimientos, setCorregimientos] = useState<any[]>([]);
-    const [communities, setCommunities] = useState<any[]>([]);
+    const [provinces, setProvinces] = useState<GeoItem[]>([]);
+    const [districts, setDistricts] = useState<GeoItem[]>([]);
+    const [corregimientos, setCorregimientos] = useState<GeoItem[]>([]);
+    const [communities, setCommunities] = useState<GeoItem[]>([]);
 
     const [selectedProvinceId, setSelectedProvinceId] = useState<number | null>(null);
     const [selectedDistrictId, setSelectedDistrictId] = useState<number | null>(null);
@@ -240,7 +259,7 @@ export default function GeografiaCRUD() {
 function GeoColumn({
     title, icon, items, selectedId, onSelect, onAdd,
     inputValue, setInputValue, isPending, type, active, placeholder
-}: any) {
+}: GeoColumnProps) {
     if (!active) {
         return (
             <div className="bg-slate-50 border-2 border-dashed border-slate-200 rounded-3xl p-8 text-center">
@@ -262,7 +281,7 @@ function GeoColumn({
             </div>
 
             <div className="p-4 grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2 max-h-[300px] overflow-y-auto">
-                {items.map((item: any) => (
+                {items.map((item) => (
                     <button
                         key={item.id}
                         onClick={() => onSelect(item.id)}
