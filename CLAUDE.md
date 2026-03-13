@@ -40,11 +40,22 @@ npx prisma db seed   # Seed database
 - `src/app/actions/*.ts` - Server actions for data mutations
 - `src/lib/prisma.ts` - Prisma client singleton
 - `src/lib/store.ts` - Zustand store for UI state
+- `src/lib/rateLimit.ts` - Rate limiting for authentication
+- `src/lib/validation.ts` - Zod validation schemas
 - `src/middleware.ts` - Authentication middleware
 - `prisma/schema.prisma` - Database schema
 
 ### Authentication
 - Uses bcryptjs for password hashing
-- Session management via cookies
+- Session management via HTTP-only cookies
 - Role-based access control (admin vs regular users)
 - Invite code system for leader registration
+- Rate limiting (5 attempts per 15 minutes)
+- Input validation with Zod schemas
+
+### Security Features
+- Security headers (CSP, X-Frame-Options, X-Content-Type-Options, etc.)
+- Rate limiting for login attempts
+- Input validation with Zod
+- HTTP-only session cookies
+- Automatic password hash upgrade (legacy plaintext → bcrypt)

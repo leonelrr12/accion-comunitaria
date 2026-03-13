@@ -3,27 +3,80 @@
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
+import { checkRateLimit } from "@/lib/rateLimit";
+import { loginSchema } from "@/lib/validation";
 
-export async function loginAction(email: string, password: string) {
+export async function loginAction(
+    emailOrFormData: string | FormData,
+    password?: string
+) {
+    let email: string;
+    let passwordValue: string;
+
+    // Handle both string parameters and FormData
+    if (typeof emailOrFormData === "object" && emailOrFormData instanceof FormData) {
+        email = emailOrFormData.get("email") as string;
+        passwordValue = emailOrFormData.get("password") as string;
+    } else {
+        email = emailOrFormData as string;
+        passwordValue = password as string;
+    }
+
+    // Validate input with Zod
+    const validation = loginSchema.safeParse({
+        email,
+        password: passwordValue,
+    });
+
+    if (!validation.success) {
+        const errors = validation.error.errors.map((e) => e.message).join(", ");
+        return { success: false, error: errors };
+    }
+
+    const { email: validEmail, password } = validation.data;
+
+    // Check rate limit (5 attempts per 15 minutes)
+    const clientIp = "default";
+    const rateLimit = checkRateLimit(`login:${clientIp}`, 5, 15 * 60 * 1000);
+
+    if (!rateLimit.allowed) {
+        return {
+            success: false,
+            error: `Demasiados intentos. Intenta de nuevo en ${rateLimit.resetInSeconds} segundos`,
+            rateLimited: true,
+            resetIn: rateLimit.resetInSeconds,
+        };
+    }
+
     try {
         const user = await prisma.user.findUnique({
-            where: { email },
+            where: { email: validEmail },
             include: { role: true },
         });
 
-        if (!user) return { success: false, error: "Usuario no encontrado" };
+        if (!user) {
+            return {
+                success: false,
+                error: "Usuario no encontrado",
+                remainingAttempts: rateLimit.remainingAttempts,
+            };
+        }
 
-        // Comparar con bcrypt (soporta hashes nuevos y contraseñas de texto plano en legado)
+        // Compare password (supports both bcrypt and legacy plaintext)
         const isPlainTextLegacy = user.passwordHash === password;
         const isBcryptMatch = user.passwordHash.startsWith("$2")
             ? await bcrypt.compare(password, user.passwordHash)
             : false;
 
         if (!isPlainTextLegacy && !isBcryptMatch) {
-            return { success: false, error: "Contraseña incorrecta" };
+            return {
+                success: false,
+                error: "Contraseña incorrecta",
+                remainingAttempts: rateLimit.remainingAttempts,
+            };
         }
 
-        // Si la contraseña era texto plano, actualizarla al hash ahora mismo
+        // Upgrade plaintext password to bcrypt
         if (isPlainTextLegacy && !isBcryptMatch) {
             const newHash = await bcrypt.hash(password, 12);
             await prisma.user.update({
@@ -45,13 +98,13 @@ export async function loginAction(email: string, password: string) {
             inviteCode: user.inviteCode,
         };
 
-        // Guardar sesión en cookie HTTP-only para que el middleware pueda validarla
+        // Save session in HTTP-only cookie
         const cookieStore = await cookies();
         cookieStore.set("session", JSON.stringify(sessionPayload), {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",
-            maxAge: 60 * 60 * 24 * 7, // 7 días
+            maxAge: 60 * 60 * 24 * 7, // 7 days
             path: "/",
         });
 
