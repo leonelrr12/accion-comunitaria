@@ -24,11 +24,12 @@ describe('Password hashing with bcryptjs', () => {
 
     it('should handle legacy plaintext comparison', () => {
         // Simulating legacy plaintext password stored in DB
-        const legacyPassword = 'plainPassword123'
+        const legacyPassword: string = 'plainPassword123'
         const isPlainTextMatch = legacyPassword === 'plainPassword123'
         expect(isPlainTextMatch).toBe(true)
 
-        const nonMatch = legacyPassword === 'differentPassword'
+        const wrongPassword: string = 'differentPassword'
+        const nonMatch = legacyPassword === wrongPassword
         expect(nonMatch).toBe(false)
     })
 

@@ -8,7 +8,7 @@ import { loginSchema } from "@/lib/validation";
 
 export async function loginAction(
     emailOrFormData: string | FormData,
-    password?: string
+    passwordParam?: string
 ) {
     let email: string;
     let passwordValue: string;
@@ -19,7 +19,7 @@ export async function loginAction(
         passwordValue = emailOrFormData.get("password") as string;
     } else {
         email = emailOrFormData as string;
-        passwordValue = password as string;
+        passwordValue = passwordParam as string;
     }
 
     // Validate input with Zod
@@ -29,11 +29,11 @@ export async function loginAction(
     });
 
     if (!validation.success) {
-        const errors = validation.error.errors.map((e) => e.message).join(", ");
+        const errors = validation.error.issues.map((e) => e.message).join(", ");
         return { success: false, error: errors };
     }
 
-    const { email: validEmail, password } = validation.data;
+    const { email: validEmail, password: validPassword } = validation.data;
 
     // Check rate limit (5 attempts per 15 minutes)
     const clientIp = "default";
@@ -63,9 +63,9 @@ export async function loginAction(
         }
 
         // Compare password (supports both bcrypt and legacy plaintext)
-        const isPlainTextLegacy = user.passwordHash === password;
+        const isPlainTextLegacy = user.passwordHash === validPassword;
         const isBcryptMatch = user.passwordHash.startsWith("$2")
-            ? await bcrypt.compare(password, user.passwordHash)
+            ? await bcrypt.compare(validPassword, user.passwordHash)
             : false;
 
         if (!isPlainTextLegacy && !isBcryptMatch) {
@@ -78,7 +78,7 @@ export async function loginAction(
 
         // Upgrade plaintext password to bcrypt
         if (isPlainTextLegacy && !isBcryptMatch) {
-            const newHash = await bcrypt.hash(password, 12);
+            const newHash = await bcrypt.hash(validPassword, 12);
             await prisma.user.update({
                 where: { id: user.id },
                 data: { passwordHash: newHash },

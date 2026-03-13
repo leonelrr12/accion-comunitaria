@@ -6,10 +6,9 @@ interface AppState {
     // Session
     currentUser: User | null;
     setCurrentUser: (user: User | null) => void;
-    login: (email: string, password: string) => boolean;
     logout: () => void;
     createUser: (user: Omit<User, "id" | "createdAt" | "inviteCode">, creatorId?: number) => void;
-    createLeader: (user: Omit<User, "id" | "createdAt" | "inviteCode" | "role" | "password">, creatorId?: number) => void;
+    createLeader: (user: Omit<User, "id" | "createdAt" | "inviteCode" | "role">, creatorId?: number) => void;
 
     // Data State
     users: User[];
@@ -37,19 +36,6 @@ export const useAppStore = create<AppState>()(
             setUsers: (users: User[]) => set({ users }),
             setRoles: (roles: Role[]) => set({ roles }),
 
-            login: (email, password) => {
-                let success = false;
-                set((state: AppState) => {
-                    const user = state.users.find((u) => u.email === email && u.password === password);
-                    if (user) {
-                        success = true;
-                        return { currentUser: user };
-                    }
-                    return state;
-                });
-                return success;
-            },
-
             logout: () => set({ currentUser: null }),
 
             createUser: (userData, creatorId) =>
@@ -72,7 +58,6 @@ export const useAppStore = create<AppState>()(
                         ...userData,
                         id: state.users.length + 1,
                         role: "Lider de Zona",
-                        password: "leader123",
                         inviteCode: `${userData.name.toUpperCase()}${state.users.length + 1}`,
                         createdBy: creatorId,
                         createdAt: new Date().toISOString(),

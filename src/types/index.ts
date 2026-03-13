@@ -51,14 +51,14 @@ export interface CreateUserInput {
     name: string;
     lastName: string;
     email: string;
-    password: string;
+    password?: string;
     phone?: string;
     role: string;
     parentLeaderId?: string;
-    provinceId?: number | null;
-    districtId?: number | null;
-    corregimientoId?: number | null;
-    communityId?: number | null;
+    provinceId?: number | string | null;
+    districtId?: number | string | null;
+    corregimientoId?: number | string | null;
+    communityId?: number | string | null;
     createdBy?: number;
 }
 

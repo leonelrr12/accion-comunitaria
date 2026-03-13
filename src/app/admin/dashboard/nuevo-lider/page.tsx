@@ -4,7 +4,7 @@ import { useState, useTransition, useEffect } from "react";
 import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { LocationSelector } from "@/components/ui/LocationSelector";
-import { createUserAction, getUsers } from "@/app/actions/users";
+import { createUserAction, getAllUsers } from "@/app/actions/users";
 import { ArrowRight, Loader2, UserCircle, MapPin, Network, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
@@ -28,8 +28,8 @@ export default function CrearLider() {
     const [availableLeaders, setAvailableLeaders] = useState<any[]>([]);
 
     useEffect(() => {
-        getUsers().then(users => {
-            setAvailableLeaders(users.filter(u => u.role.name !== "ADMIN"));
+        getAllUsers().then(users => {
+            setAvailableLeaders(users.filter((u: any) => u.role.name !== "ADMIN"));
         });
     }, []);
 
@@ -153,13 +153,13 @@ export default function CrearLider() {
                                 >
                                     <option value="">Líder Principal (Nivel 0)</option>
                                     {availableLeaders
-                                        .filter(u => u.role.name !== "ADMIN")
-                                        .filter(u => {
+                                        .filter((u: any) => u.role.name !== "ADMIN")
+                                        .filter((u: any) => {
                                             if (u.role.name === "Activista") return false;
                                             if (u.role.name === "Comunitario" && formData.role !== "Activista") return false;
                                             return true;
                                         })
-                                        .map(u => (
+                                        .map((u: any) => (
                                             <option key={u.id} value={u.id}>{u.name} {u.lastName} ({u.role.name})</option>
                                         ))
                                     }
