@@ -1,0 +1,360 @@
+Perfecto. Vamos a diseñar **un agente IA conectado a tu base de datos PostgreSQL + Prisma + Ollama** que pueda **consultar y operar tu sistema de Acción Comunitaria** usando lenguaje natural.
+
+La idea es que puedas preguntarle cosas como:
+
+💬
+
+* “¿Cuántas personas hay en la comunidad El Progreso?”
+* “Muéstrame los afiliados de Juan Pérez”
+* “Registra una persona nueva”
+* “¿Cuántas personas hay en el distrito de La Chorrera?”
+
+y el agente **automáticamente ejecuta consultas o acciones en la base de datos**.
+
+---
+
+# 1. Arquitectura del Agente IA
+
+La arquitectura recomendada es esta:
+
+```
+Usuario
+   │
+Chat UI / API
+   │
+Agent Controller
+   │
+Ollama (LLM)
+   │
+Tool Router
+   │
+Skills (Funciones)
+   │
+Prisma ORM
+   │
+PostgreSQL
+```
+
+### Explicación
+
+| Componente       | Función                    |
+| ---------------- | -------------------------- |
+| Frontend         | Chat con el usuario        |
+| Agent Controller | Controla el flujo          |
+| Ollama           | Comprende lenguaje natural |
+| Tools            | Habilidades del agente     |
+| Prisma           | Acceso a base de datos     |
+| PostgreSQL       | Datos                      |
+
+---
+
+# 2. Skills (Tools) del Agente
+
+Las **skills son funciones que el agente puede ejecutar**.
+
+Para tu proyecto recomiendo empezar con estas.
+
+### Registro
+
+```
+crear_persona
+crear_usuario
+```
+
+### Consultas
+
+```
+buscar_persona
+personas_por_comunidad
+personas_por_distrito
+afiliados_de_lider
+```
+
+### Geografía
+
+```
+listar_provincias
+listar_distritos
+listar_corregimientos
+listar_comunidades
+```
+
+### Estadísticas
+
+```
+total_personas
+personas_por_provincia
+ranking_lideres
+```
+
+---
+
+# 3. Ejemplo de Skill
+
+### Skill: crear persona
+
+```javascript
+async function crearPersona(data) {
+  return await prisma.persons.create({
+    data: {
+      first_name: data.nombre,
+      last_name: data.apellido,
+      phone: data.telefono,
+      community_id: data.community_id,
+      leader_user_id: data.lider_id
+    }
+  });
+}
+```
+
+---
+
+# 4. Definir las Tools para el Agente
+
+Ejemplo para el modelo:
+
+```json
+{
+  "name": "crear_persona",
+  "description": "Registrar una persona en el sistema",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "nombre": { "type": "string" },
+      "apellido": { "type": "string" },
+      "telefono": { "type": "string" },
+      "community_id": { "type": "number" },
+      "lider_id": { "type": "number" }
+    }
+  }
+}
+```
+
+---
+
+# 5. Flujo de Ejecución
+
+### Usuario pregunta
+
+```
+Registra a Maria Lopez telefono 61234567 en comunidad 15
+```
+
+### LLM decide usar tool
+
+Respuesta del modelo:
+
+```json
+{
+ "tool": "crear_persona",
+ "arguments": {
+   "nombre": "Maria",
+   "apellido": "Lopez",
+   "telefono": "61234567",
+   "community_id": 15
+ }
+}
+```
+
+### Backend ejecuta
+
+```
+crearPersona()
+```
+
+### Resultado
+
+```
+Persona registrada correctamente
+```
+
+---
+
+# 6. Ejemplo con Ollama (Node.js)
+
+Primero instalar:
+
+```
+npm install ollama
+```
+
+Ejemplo básico:
+
+```javascript
+import ollama from 'ollama'
+
+const response = await ollama.chat({
+  model: 'qwen2.5',
+  messages: [
+    {
+      role: 'user',
+      content: 'Cuántas personas hay en la comunidad 10'
+    }
+  ]
+})
+
+console.log(response.message.content)
+```
+
+---
+
+# 7. Router de Tools
+
+El backend debe detectar cuando el modelo llama una tool.
+
+Ejemplo:
+
+```javascript
+if(response.tool === "personas_por_comunidad"){
+   return personasPorComunidad(response.arguments.community_id)
+}
+```
+
+---
+
+# 8. Ejemplo de consulta con Prisma
+
+```javascript
+async function personasPorComunidad(communityId) {
+  return await prisma.persons.count({
+    where: {
+      community_id: communityId
+    }
+  })
+}
+```
+
+---
+
+# 9. UI recomendada
+
+Puedes crear un **chat administrativo** dentro del sistema.
+
+Ejemplo:
+
+```
+---------------------------------
+🤖 Asistente Comunitario
+
+> cuántas personas hay en la comunidad 15
+
+Hay 142 personas registradas.
+---------------------------------
+```
+
+Esto facilita mucho la gestión.
+
+---
+
+# 10. Seguridad del Agente
+
+Debes limitar lo que el agente puede hacer.
+
+Por ejemplo:
+
+```
+admin → todas las acciones
+lider → solo sus afiliados
+usuario → consultas básicas
+```
+
+Nunca permitir:
+
+```
+DELETE masivo
+UPDATE global
+```
+
+---
+
+# 11. Capacidades futuras del agente
+
+Cuando el sistema crezca puedes agregar:
+
+### Analítica
+
+```
+Crecimiento por provincia
+Top líderes
+Comunidades con más afiliados
+```
+
+### Mapas
+
+```
+Personas en mapa
+Líderes por región
+```
+
+### Automatización
+
+```
+Enviar mensajes
+Asignar líderes
+Crear reportes
+```
+
+---
+
+# 12. Modelo recomendado en Ollama
+
+Para este tipo de agente:
+
+| Modelo         | Uso            |
+| -------------- | -------------- |
+| qwen2.5        | agente general |
+| deepseek-coder | herramientas   |
+| llama3         | conversación   |
+
+Mi recomendación:
+
+```
+qwen2.5
+```
+
+---
+
+# 13. Evolución futura
+
+Tu sistema podría evolucionar a:
+
+```
+CRM comunitario nacional
++
+analítica territorial
++
+organización territorial
++
+IA administrativa
+```
+
+Muy pocas plataformas tienen esto.
+
+---
+
+# 14. Algo MUY poderoso que podrías agregar
+
+Una característica que cambiaría completamente tu sistema:
+
+**Mapa interactivo de Panamá con afiliados y líderes.**
+
+Donde puedas ver:
+
+```
+Provincia
+Distrito
+Corregimiento
+Comunidad
+Personas
+Líderes
+```
+
+Esto lo usan **partidos políticos, ONG y organizaciones grandes**.
+
+---
+
+✅ Si quieres, en el siguiente paso puedo diseñarte también:
+
+**La base de datos completa de Panamá (Provincias + Distritos + Corregimientos reales)** lista para importar a PostgreSQL.
+
+Eso te ahorraría **días de trabajo recopilando datos geográficos**.
