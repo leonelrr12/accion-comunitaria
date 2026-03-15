@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { cookies } from "next/headers";
 import { checkRateLimit } from "@/lib/rateLimit";
 import { loginSchema } from "@/lib/validation";
+import { encrypt } from "@/lib/auth-utils";
 
 export async function loginAction(
     emailOrFormData: string | FormData,
@@ -99,8 +100,9 @@ export async function loginAction(
         };
 
         // Save session in HTTP-only cookie
+        const encryptedSession = await encrypt(sessionPayload);
         const cookieStore = await cookies();
-        cookieStore.set("session", JSON.stringify(sessionPayload), {
+        cookieStore.set("session", encryptedSession, {
             httpOnly: true,
             secure: process.env.NODE_ENV === "production",
             sameSite: "lax",

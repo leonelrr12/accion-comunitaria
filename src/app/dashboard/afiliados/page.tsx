@@ -5,18 +5,20 @@ import { useState, useEffect, useCallback } from "react";
 import { UserPlus, Loader2 } from "lucide-react";
 import Link from "next/link";
 import { getAffiliates, getAllAffiliates } from "@/app/actions/affiliates";
+import { mapPersonFromDB } from "@/lib/mappers";
 import Pagination from "@/components/ui/Pagination";
 import SearchBar from "@/components/ui/SearchBar";
 import { useDebounce } from "@/lib/useDebounce";
 import { exportToCSV } from "@/lib/export";
 import { toast } from "sonner";
+import type { Person } from "@/types";
 
 const PAGE_SIZE = 10;
 
 export default function Afiliados() {
     const currentUser = useAppStore((state) => state.currentUser);
 
-    const [persons, setPersons] = useState<any[]>([]);
+    const [persons, setPersons] = useState<Person[]>([]);
     const [loading, setLoading] = useState(true);
     const [searchTerm, setSearchTerm] = useState("");
     const [currentPage, setCurrentPage] = useState(1);
@@ -62,7 +64,8 @@ export default function Afiliados() {
             pageSize: PAGE_SIZE,
             search,
         });
-        setPersons(result.data);
+        const mapped = result.data.map(mapPersonFromDB);
+        setPersons(mapped);
         setTotal(result.total);
         setTotalPages(result.totalPages);
         setLoading(false);

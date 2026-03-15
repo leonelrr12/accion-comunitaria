@@ -1,7 +1,8 @@
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
+import { decrypt } from "@/lib/auth-utils";
 
-export function middleware(request: NextRequest) {
+export async function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
     const sessionCookie = request.cookies.get("session");
 
@@ -15,39 +16,29 @@ export function middleware(request: NextRequest) {
     const isAdminRoute = pathname.startsWith("/admin");
     const isDashboardRoute = pathname.startsWith("/dashboard");
 
+    // Decrypt session
+    const session = sessionCookie ? await decrypt(sessionCookie.value) : null;
+
     // If no session and trying to access protected route
-    if ((isAdminRoute || isDashboardRoute) && !sessionCookie) {
+    if ((isAdminRoute || isDashboardRoute) && !session) {
         const loginUrl = new URL("/login", request.url);
         loginUrl.searchParams.set("redirect", pathname);
         return NextResponse.redirect(loginUrl);
     }
 
     // If has session, verify role for admin routes
-    if (isAdminRoute && sessionCookie) {
-        try {
-            const session = JSON.parse(sessionCookie.value);
-            if (session.role !== "ADMIN") {
-                return NextResponse.redirect(new URL("/dashboard", request.url));
-            }
-        } catch {
-            // Malformed cookie → clear and redirect
-            const response = NextResponse.redirect(new URL("/login", request.url));
-            response.cookies.delete("session");
-            return response;
+    if (isAdminRoute && session) {
+        if (session.role !== "ADMIN") {
+            return NextResponse.redirect(new URL("/dashboard", request.url));
         }
     }
 
-    // Prevent logged-in users from accessing login/registro pages
-    if (isPublicRoute && sessionCookie) {
-        try {
-            const session = JSON.parse(sessionCookie.value);
-            if (session.role === "ADMIN") {
-                return NextResponse.redirect(new URL("/admin/dashboard", request.url));
-            }
-            return NextResponse.redirect(new URL("/dashboard", request.url));
-        } catch {
-            // Invalid session, let them through
+    // Prevent logged-in users from accessing the login page
+    if (pathname.startsWith("/login") && session) {
+        if (session.role === "ADMIN") {
+            return NextResponse.redirect(new URL("/admin/dashboard", request.url));
         }
+        return NextResponse.redirect(new URL("/dashboard", request.url));
     }
 
     return NextResponse.next();

@@ -92,7 +92,7 @@ export default function Home() {
                 Iniciar Sesión
               </Link>
               <Link
-                href="/register"
+                href="/registro"
                 className="w-full flex justify-center py-3 text-base font-medium text-white bg-gray-900 rounded-xl shadow-md"
               >
                 Crear Cuenta

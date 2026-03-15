@@ -11,7 +11,7 @@ import ConfirmDialog from "@/components/ui/ConfirmDialog";
 import SearchBar from "@/components/ui/SearchBar";
 import Pagination from "@/components/ui/Pagination";
 import { useDebounce } from "@/lib/useDebounce";
-import { mapUserFromDB } from "@/lib/mappers";
+import { mapUserFromDB, mapRoleFromDB } from "@/lib/mappers";
 import type { User } from "@/types";
 
 export default function GestionUsuarios() {
@@ -46,9 +46,10 @@ export default function GestionUsuarios() {
         ]);
 
         const mappedUsers: User[] = result.data.map(mapUserFromDB);
+        const mappedRoles = dbRoles.map(mapRoleFromDB);
 
         setUsers(mappedUsers);
-        setRoles(dbRoles);
+        setRoles(mappedRoles);
         setTotalPages(result.totalPages);
         setTotalUsers(result.total);
         return mappedUsers;

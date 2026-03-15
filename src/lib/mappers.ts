@@ -1,4 +1,4 @@
-import { User } from "@/types";
+import { User, Role, Person } from "@/types";
 
 /**
  * Mapea un usuario de la base de datos (con sus relaciones) al formato seguro del cliente.
@@ -20,5 +20,37 @@ export function mapUserFromDB(dbUser: any): User {
         createdBy: dbUser.createdBy,
         parentLeaderId: dbUser.leaders && dbUser.leaders.length > 0 ? String(dbUser.leaders[0].leaderId) : "",
         createdAt: dbUser.createdAt instanceof Date ? dbUser.createdAt.toISOString() : dbUser.createdAt,
+    };
+}
+
+/**
+ * Mapea un rol de la base de datos al formato del cliente.
+ */
+export function mapRoleFromDB(dbRole: any): Role {
+    return {
+        id: dbRole.id,
+        name: dbRole.name,
+        description: dbRole.description,
+        createdAt: dbRole.createdAt instanceof Date ? dbRole.createdAt.toISOString() : dbRole.createdAt,
+    };
+}
+
+/**
+ * Mapea un afiliado (persona) de la base de datos al formato del cliente.
+ */
+export function mapPersonFromDB(dbPerson: any): Person {
+    return {
+        id: dbPerson.id,
+        name: dbPerson.name,
+        lastName: dbPerson.lastName,
+        cedula: dbPerson.cedula,
+        phone: dbPerson.phone,
+        email: dbPerson.email,
+        provinceId: dbPerson.provinceId,
+        districtId: dbPerson.districtId,
+        corregimientoId: dbPerson.corregimientoId,
+        communityId: dbPerson.communityId,
+        leaderUserId: dbPerson.leaderUserId,
+        createdAt: dbPerson.createdAt instanceof Date ? dbPerson.createdAt.toISOString() : dbPerson.createdAt,
     };
 }
