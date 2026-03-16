@@ -33,28 +33,33 @@ const SYSTEM_PROMPT = `Eres un asistente administrativo para el sistema de Acci�
 Tu función es ayudar a gestionar personas, líderes y comunidades.
 
 Tienes acceso a las siguientes capacidades:
-- Gestión de personas: buscar, crear, listar personas
+- Gestión de personas: buscar, crear, actualizar, eliminar y listar personas
+- Gestión de usuarios: buscar y listar usuarios del sistema
 - Geografía: consultar provincias, distritos, corregimientos y comunidades
 - Estadísticas: totales, rankings y resúmenes del sistema
 
 Reglas importantes:
 1. Siempre responde en español
 2. Sé preciso con los datos que proporcionas
-3. Antes de crear una persona, verifica que no exista
-4. Para operaciones sensibles, confirma con el usuario
-5. Usa las tools disponibles cuando necesites consultar o crear datos
+3. Antes de crear una persona, verifica que no exista por cédula
+4. Para operaciones sensibles (eliminar, actualizar), confirma con el usuario mostrando los datos actuales
+5. Usa las tools disponibles cuando necesites consultar o modificar datos
+6. Cuando busques personas, muestra nombre completo y cédula para identificación
 
 Contexto del sistema:
 - Jerarquía geográfica: Provincia > Distrito > Corregimiento > Comunidad
 - Las personas pueden tener un líder asignado
-- Los usuarios pueden ser administradores o líderes`
+- Los usuarios pueden ser administradores o líderes
+- Cada persona tiene una cédula única que la identifica`
 
 export class Agent {
   private model: string
   private tools: Tool[]
   private toolDefinitions: ToolDefinition[]
 
-  constructor(model: string = 'qwen2.5', tools: Tool[] = allTools) {
+  //qwen2.5:1.5b
+  //'qwen2.5'
+  constructor(model: string = 'qwen2.5:1.5b', tools: Tool[] = allTools) {
     this.model = model
     this.tools = tools
     this.toolDefinitions = toolsToOllamaFormat(tools)
@@ -133,28 +138,164 @@ export class Agent {
 
     for (const { name, result } of results) {
       switch (name) {
+        // === PERSONAS ===
         case 'buscar_persona':
           const personas = result as any[]
           if (personas.length === 0) {
-            lines.push('No se encontraron personas.')
+            lines.push('❌ No se encontraron personas.')
           } else {
-            lines.push(`Se encontraron ${personas.length} persona(s):`)
+            lines.push(`✅ Se encontraron ${personas.length} persona(s):`)
             personas.forEach((p: any) => {
-              lines.push(`- ${p.name} ${p.lastName} (Cédula: ${p.cedula})`)
+              const comunidad = p.community?.name ? ` - ${p.community.name}` : ''
+              const lider = p.leader ? ` (Líder: ${p.leader.name} ${p.leader.lastName})` : ''
+              lines.push(`• ${p.name} ${p.lastName} (ID: ${p.id}, Cédula: ${p.cedula})${comunidad}${lider}`)
             })
           }
           break
 
-        case 'crear_persona':
-          const created = result as { success: boolean; id: number }
-          if (created.success) {
-            lines.push(`Persona creada exitosamente con ID: ${created.id}`)
+        case 'buscar_persona_por_id':
+          const personaDetallada = result as { success: boolean; persona?: any; error?: string }
+          if (!personaDetallada.success) {
+            lines.push(`❌ ${personaDetallada.error}`)
+          } else {
+            const p = personaDetallada.persona
+            lines.push(`📋 Detalles de la persona:`)
+            lines.push(`• Nombre: ${p.name} ${p.lastName}`)
+            lines.push(`• Cédula: ${p.cedula}`)
+            if (p.phone) lines.push(`• Teléfono: ${p.phone}`)
+            if (p.email) lines.push(`• Email: ${p.email}`)
+            if (p.province) lines.push(`• Provincia: ${p.province.name}`)
+            if (p.district) lines.push(`• Distrito: ${p.district.name}`)
+            if (p.corregimiento) lines.push(`• Corregimiento: ${p.corregimiento.name}`)
+            if (p.community) lines.push(`• Comunidad: ${p.community.name}`)
+            if (p.leader) lines.push(`• Líder: ${p.leader.name} ${p.leader.lastName}`)
           }
           break
 
+        case 'crear_persona':
+          const created = result as { success: boolean; id?: number; error?: string }
+          if (created.success) {
+            lines.push(`✅ Persona creada exitosamente con ID: ${created.id}`)
+          } else {
+            lines.push(`❌ Error: ${created.error}`)
+          }
+          break
+
+        case 'actualizar_persona':
+          const updated = result as { success: boolean; persona?: any; error?: string }
+          if (!updated.success) {
+            lines.push(`❌ ${updated.error}`)
+          } else {
+            lines.push(`✅ Persona actualizada correctamente`)
+            lines.push(`• ${updated.persona.name} ${updated.persona.lastName} (ID: ${updated.persona.id})`)
+          }
+          break
+
+        case 'eliminar_persona':
+          const deleted = result as { success: boolean; message?: string; error?: string }
+          if (deleted.success) {
+            lines.push(`✅ ${deleted.message}`)
+          } else {
+            lines.push(`❌ ${deleted.error}`)
+          }
+          break
+
+        case 'asignar_lider':
+          const assigned = result as { success: boolean; message?: string; error?: string }
+          if (assigned.success) {
+            lines.push(`✅ ${assigned.message}`)
+          } else {
+            lines.push(`❌ ${assigned.error}`)
+          }
+          break
+
+        case 'listar_personas':
+          const listaPersonas = result as { personas: any[]; total: number; pagina: number; totalPaginas: number }
+          lines.push(`📋 Lista de personas (Página ${listaPersonas.pagina} de ${listaPersonas.totalPaginas}, Total: ${listaPersonas.total}):`)
+          listaPersonas.personas.forEach((p: any) => {
+            const comunidad = p.community?.name ? ` - ${p.community.name}` : ''
+            lines.push(`• [${p.id}] ${p.name} ${p.lastName} (${p.cedula})${comunidad}`)
+          })
+          break
+
+        case 'personas_por_comunidad':
+          const porComunidad = result as { comunidad: string; total: number }
+          lines.push(`📊 Personas en ${porComunidad.comunidad || 'la comunidad'}: ${porComunidad.total}`)
+          break
+
+        case 'afiliados_de_lider':
+          const afiliados = result as { lider: any; total: number; afiliados: any[] }
+          lines.push(`👥 Afiliados de ${afiliados.lider.name} ${afiliados.lider.lastName}: ${afiliados.total} personas`)
+          if (afiliados.afiliados.length > 0) {
+            afiliados.afiliados.forEach((a: any) => {
+              const comunidad = a.community?.name ? ` (${a.community.name})` : ''
+              lines.push(`• ${a.name} ${a.lastName} - ${a.cedula}${comunidad}`)
+            })
+          }
+          break
+
+        // === USUARIOS ===
+        case 'buscar_usuario':
+          const usuarios = result as any[]
+          if (usuarios.length === 0) {
+            lines.push('❌ No se encontraron usuarios.')
+          } else {
+            lines.push(`✅ Se encontraron ${usuarios.length} usuario(s):`)
+            usuarios.forEach((u: any) => {
+              lines.push(`• [${u.id}] ${u.name} ${u.lastName} (${u.email}) - ${u.role} - ${u.afiliados} afiliados`)
+            })
+          }
+          break
+
+        case 'listar_usuarios':
+          const listaUsuarios = result as { usuarios: any[]; total: number; pagina: number; totalPaginas: number }
+          lines.push(`📋 Lista de usuarios (Página ${listaUsuarios.pagina} de ${listaUsuarios.totalPaginas}, Total: ${listaUsuarios.total}):`)
+          listaUsuarios.usuarios.forEach((u: any) => {
+            const comunidad = u.community ? ` - ${u.community}` : ''
+            lines.push(`• [${u.id}] ${u.name} ${u.lastName} (${u.role}) - ${u.afiliados} afiliados${comunidad}`)
+          })
+          break
+
+        case 'usuario_por_id':
+          const usuarioDetallado = result as { success: boolean; usuario?: any; error?: string }
+          if (!usuarioDetallado.success) {
+            lines.push(`❌ ${usuarioDetallado.error}`)
+          } else {
+            const u = usuarioDetallado.usuario
+            lines.push(`👤 Detalles del usuario:`)
+            lines.push(`• Nombre: ${u.name} ${u.lastName}`)
+            lines.push(`• Email: ${u.email}`)
+            lines.push(`• Rol: ${u.role.name}`)
+            if (u.phone) lines.push(`• Teléfono: ${u.phone}`)
+            if (u.community) lines.push(`• Comunidad: ${u.community}`)
+            lines.push(`• Afiliados: ${u.afiliados}`)
+          }
+          break
+
+        case 'estadisticas_usuario':
+          const statsUsuario = result as { usuario: any; totalAfiliados: number; distribucionPorComunidad: any[] }
+          lines.push(`📊 Estadísticas de ${statsUsuario.usuario.nombre}:`)
+          lines.push(`• Total afiliados: ${statsUsuario.totalAfiliados}`)
+          if (statsUsuario.distribucionPorComunidad.length > 0) {
+            lines.push(`• Distribución por comunidad:`)
+            statsUsuario.distribucionPorComunidad.forEach((d: any) => {
+              lines.push(`  - ${d.comunidad}: ${d.cantidad}`)
+            })
+          }
+          break
+
+        case 'listar_roles':
+          const roles = result as any[]
+          lines.push(`📋 Roles disponibles:`)
+          roles.forEach((r: any) => {
+            lines.push(`• [${r.id}] ${r.name} - ${r.usuarios} usuarios`)
+          })
+          break
+
+        // === ESTADÍSTICAS ===
         case 'total_personas':
           const total = result as { total: number }
-          lines.push(`Total de personas registradas: ${total.total}`)
+          lines.push(`📊 Total de personas registradas: ${total.total}`)
           break
 
         case 'estadisticas_generales':
@@ -167,12 +308,12 @@ export class Agent {
             comunidades: number
           }
           lines.push('📊 Estadísticas del sistema:')
-          lines.push(`- Personas: ${stats.personas}`)
-          lines.push(`- Usuarios: ${stats.usuarios}`)
-          lines.push(`- Provincias: ${stats.provincias}`)
-          lines.push(`- Distritos: ${stats.distritos}`)
-          lines.push(`- Corregimientos: ${stats.corregimientos}`)
-          lines.push(`- Comunidades: ${stats.comunidades}`)
+          lines.push(`• Personas: ${stats.personas}`)
+          lines.push(`• Usuarios: ${stats.usuarios}`)
+          lines.push(`• Provincias: ${stats.provincias}`)
+          lines.push(`• Distritos: ${stats.distritos}`)
+          lines.push(`• Corregimientos: ${stats.corregimientos}`)
+          lines.push(`• Comunidades: ${stats.comunidades}`)
           break
 
         case 'ranking_lideres':
@@ -183,10 +324,66 @@ export class Agent {
           })
           break
 
+        case 'personas_por_provincia':
+          const porProvincia = result as Array<{ provincia: string; total: number }>
+          lines.push('📊 Personas por provincia:')
+          porProvincia.forEach((p) => {
+            lines.push(`• ${p.provincia}: ${p.total}`)
+          })
+          break
+
+        case 'personas_por_distrito':
+          const porDistrito = result as { distrito: string; provincia: string; total: number }
+          lines.push(`📊 ${porDistrito.distrito} (${porDistrito.provincia}): ${porDistrito.total} personas`)
+          break
+
+        // === GEOGRAFÍA ===
         case 'listar_provincias':
           const provincias = result as Array<{ id: number; name: string }>
           lines.push('📋 Provincias:')
-          provincias.forEach(p => lines.push(`- ${p.id}: ${p.name}`))
+          provincias.forEach(p => lines.push(`• [${p.id}] ${p.name}`))
+          break
+
+        case 'listar_distritos':
+          const distritos = result as Array<{ id: number; name: string; provincia: string }>
+          lines.push('📋 Distritos:')
+          distritos.forEach(d => lines.push(`• [${d.id}] ${d.name} (${d.provincia})`))
+          break
+
+        case 'listar_corregimientos':
+          const corregimientos = result as Array<{ id: number; name: string; distrito: string; provincia: string }>
+          lines.push('📋 Corregimientos:')
+          corregimientos.forEach(c => lines.push(`• [${c.id}] ${c.name} (${c.distrito}, ${c.provincia})`))
+          break
+
+        case 'listar_comunidades':
+          const comunidades = result as Array<{ id: number; name: string; corregimiento: string; distrito: string }>
+          lines.push('📋 Comunidades:')
+          comunidades.forEach(c => lines.push(`• [${c.id}] ${c.name} (${c.corregimiento}, ${c.distrito})`))
+          break
+
+        case 'buscar_ubicacion':
+          const ubicaciones = result as { provincias: any[]; distritos: any[]; corregimientos: any[]; comunidades: any[] }
+          const totalUbicaciones = ubicaciones.provincias.length + ubicaciones.distritos.length +
+                                   ubicaciones.corregimientos.length + ubicaciones.comunidades.length
+          lines.push(`🔍 Se encontraron ${totalUbicaciones} resultado(s):`)
+
+          if (ubicaciones.provincias.length > 0) {
+            lines.push('Provincias:')
+            ubicaciones.provincias.forEach((p: any) => lines.push(`• [${p.id}] ${p.name}`))
+          }
+          if (ubicaciones.distritos.length > 0) {
+            lines.push('Distritos:')
+            ubicaciones.distritos.forEach((d: any) => lines.push(`• [${d.id}] ${d.name} (${d.provincia})`))
+          }
+          if (ubicaciones.corregimientos.length > 0) {
+            lines.push('Corregimientos:')
+            ubicaciones.corregimientos.forEach((c: any) => lines.push(`• [${c.id}] ${c.name} (${c.distrito}, ${c.provincia})`))
+          }
+          if (ubicaciones.comunidades.length > 0) {
+            lines.push('Comunidades:')
+            ubicaciones.comunidades.forEach((c: any) => lines.push(`• [${c.id}] ${c.name} (${c.corregimiento}, ${c.distrito})`))
+          }
           break
 
         default:
