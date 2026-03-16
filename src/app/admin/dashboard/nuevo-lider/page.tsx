@@ -51,7 +51,11 @@ export default function CrearLider() {
             });
 
             if (result.success) {
-                toast.success("Líder registrado correctamente");
+                if (result.tempPassword) {
+                    toast.success(`Líder registrado. Clave temporal: ${result.tempPassword}`, { duration: 20000 });
+                } else {
+                    toast.success("Líder registrado correctamente");
+                }
                 router.push("/admin/dashboard/usuarios");
             } else {
                 toast.error("Error: " + result.error);

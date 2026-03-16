@@ -19,11 +19,27 @@ export async function middleware(request: NextRequest) {
     // Decrypt session
     const session = sessionCookie ? await decrypt(sessionCookie.value) : null;
 
+    // Allow access to password change only if logged in and must change password
+    if (pathname.startsWith("/cambiar-password")) {
+        if (!session) {
+            return NextResponse.redirect(new URL("/login", request.url));
+        }
+        if (!session.mustChangePassword) {
+            return NextResponse.redirect(new URL(session.role === "ADMIN" ? "/admin/dashboard" : "/dashboard", request.url));
+        }
+        return NextResponse.next();
+    }
+
     // If no session and trying to access protected route
     if ((isAdminRoute || isDashboardRoute) && !session) {
         const loginUrl = new URL("/login", request.url);
         loginUrl.searchParams.set("redirect", pathname);
         return NextResponse.redirect(loginUrl);
+    }
+
+    // Force password change for logged in users trying to access protected routes
+    if ((isAdminRoute || isDashboardRoute) && session && session.mustChangePassword) {
+        return NextResponse.redirect(new URL("/cambiar-password", request.url));
     }
 
     // If has session, verify role for admin routes
@@ -35,6 +51,9 @@ export async function middleware(request: NextRequest) {
 
     // Prevent logged-in users from accessing the login page
     if (pathname.startsWith("/login") && session) {
+        if (session.mustChangePassword) {
+            return NextResponse.redirect(new URL("/cambiar-password", request.url));
+        }
         if (session.role === "ADMIN") {
             return NextResponse.redirect(new URL("/admin/dashboard", request.url));
         }
@@ -50,5 +69,6 @@ export const config = {
         "/dashboard/:path*",
         "/login",
         "/registro",
+        "/cambiar-password",
     ],
 };

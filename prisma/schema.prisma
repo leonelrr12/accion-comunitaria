@@ -78,8 +78,10 @@ model User {
   corregimientoId Int?
   communityId     Int?
   inviteCode      String?         @unique
-  createdBy       Int?
-  createdAt       DateTime        @default(now())
+  mustChangePassword Boolean         @default(true)
+  lastLogin          DateTime?
+  createdBy          Int?
+  createdAt          DateTime        @default(now())
   persons         Person[]
   subordinates    UserHierarchy[] @relation("LeaderRelation")
   leaders         UserHierarchy[] @relation("SubordinateRelation")

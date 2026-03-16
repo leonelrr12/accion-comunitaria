@@ -21,6 +21,8 @@ export interface User {
     inviteCode?: string | null;
     createdBy?: number | null;
     parentLeaderId?: string | null;
+    mustChangePassword: boolean;
+    lastLogin?: string | null;
     createdAt: string;
 }
 
@@ -60,6 +62,7 @@ export interface CreateUserInput {
     corregimientoId?: number | string | null;
     communityId?: number | string | null;
     createdBy?: number;
+    mustChangePassword?: boolean;
 }
 
 export interface UpdateUserInput {

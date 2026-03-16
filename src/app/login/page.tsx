@@ -22,7 +22,9 @@ export default function Login() {
 
     useEffect(() => {
         if (currentUser) {
-            if (currentUser.role === "ADMIN") {
+            if (currentUser.mustChangePassword) {
+                router.push("/cambiar-password");
+            } else if (currentUser.role === "ADMIN") {
                 router.push("/admin/dashboard");
             } else {
                 router.push("/dashboard");

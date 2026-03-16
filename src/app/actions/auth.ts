@@ -82,7 +82,12 @@ export async function loginAction(
             const newHash = await bcrypt.hash(validPassword, 12);
             await prisma.user.update({
                 where: { id: user.id },
-                data: { passwordHash: newHash },
+                data: { passwordHash: newHash, lastLogin: new Date() },
+            });
+        } else {
+            await prisma.user.update({
+                where: { id: user.id },
+                data: { lastLogin: new Date() },
             });
         }
 
@@ -97,6 +102,7 @@ export async function loginAction(
             corregimientoId: user.corregimientoId,
             communityId: user.communityId,
             inviteCode: user.inviteCode,
+            mustChangePassword: user.mustChangePassword,
         };
 
         // Save session in HTTP-only cookie
@@ -122,4 +128,49 @@ export async function logoutAction() {
     const cookieStore = await cookies();
     cookieStore.delete("session");
     return { success: true };
+}
+
+export async function changePasswordAction(password: string) {
+    const cookieStore = await cookies();
+    const sessionCookie = cookieStore.get("session");
+
+    if (!sessionCookie) {
+        return { success: false, error: "No session found" };
+    }
+
+    const session = await import("@/lib/auth-utils").then(m => m.decrypt(sessionCookie.value));
+    if (!session) {
+        return { success: false, error: "Invalid session" };
+    }
+
+    try {
+        const newHash = await bcrypt.hash(password, 12);
+        
+        await prisma.user.update({
+            where: { id: session.id },
+            data: { 
+                passwordHash: newHash,
+                mustChangePassword: false 
+            },
+        });
+
+        // Update the session via redefining the session object payload
+        const newSessionPayload = {
+            ...session,
+            mustChangePassword: false,
+        };
+
+        const encryptedSession = await import("@/lib/auth-utils").then(m => m.encrypt(newSessionPayload));
+        cookieStore.set("session", encryptedSession, {
+            httpOnly: true,
+            secure: process.env.NODE_ENV === "production",
+            sameSite: "lax",
+            maxAge: 60 * 60 * 24 * 7, // 7 days
+            path: "/",
+        });
+
+        return { success: true };
+    } catch (e: unknown) {
+        return { success: false, error: "Error cambiando contraseña" };
+    }
 }

@@ -78,7 +78,8 @@ export async function createUserAction(data: CreateUserInput) {
             ? `${data.name.substring(0, 2).toUpperCase()}${Math.floor(1000 + Math.random() * 9000)}`
             : null;
 
-        const passwordToHash = data.password || "changeme123";
+        const isTempPassword = !data.password;
+        const passwordToHash = data.password || Math.random().toString(36).substring(2, 10);
         const passwordHash = await bcrypt.hash(passwordToHash, 12);
 
         const newUser = await prisma.user.create({
@@ -89,11 +90,12 @@ export async function createUserAction(data: CreateUserInput) {
                 passwordHash,
                 phone: data.phone,
                 roleId: role.id,
-                createdBy: data.createdBy ? parseInt(String(data.createdBy)) : null,
-                provinceId: data.provinceId ? parseInt(String(data.provinceId)) : null,
-                districtId: data.districtId ? parseInt(String(data.districtId)) : null,
-                corregimientoId: data.corregimientoId ? parseInt(String(data.corregimientoId)) : null,
-                communityId: data.communityId ? parseInt(String(data.communityId)) : null,
+                mustChangePassword: isTempPassword,
+                createdBy: data.createdBy ? parseInt(String(data.createdBy), 10) : null,
+                provinceId: data.provinceId ? parseInt(String(data.provinceId), 10) : null,
+                districtId: data.districtId ? parseInt(String(data.districtId), 10) : null,
+                corregimientoId: data.corregimientoId ? parseInt(String(data.corregimientoId), 10) : null,
+                communityId: data.communityId ? parseInt(String(data.communityId), 10) : null,
                 inviteCode: inviteCode,
             }
         });
@@ -128,7 +130,7 @@ export async function createUserAction(data: CreateUserInput) {
 
         revalidatePath("/admin/dashboard/usuarios");
         revalidatePath("/admin/dashboard");
-        return { success: true, user: newUser };
+        return { success: true, user: newUser, tempPassword: isTempPassword ? passwordToHash : undefined };
     } catch (error) {
         console.error("Error creating user:", error);
         const message = error instanceof Error ? error.message : "Error desconocido";
