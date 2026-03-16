@@ -71,10 +71,13 @@ export default function AsistentePage() {
             });
 
             if (!response.ok) {
-                throw new Error("Error al conectar con el asistente");
             }
 
             const data = await response.json();
+
+            if (!response.ok) {
+                throw new Error(data.error || "Error al conectar con el asistente");
+            }
 
             const assistantMessage: Message = {
                 id: `assistant-${Date.now()}`,
@@ -86,7 +89,7 @@ export default function AsistentePage() {
             setMessages((prev) => [...prev, assistantMessage]);
         } catch (err) {
             console.error("Chat error:", err);
-            setError("No se pudo conectar con el asistente. Verifica que Ollama esté ejecutándose.");
+            setError(err instanceof Error ? err.message : "No se pudo conectar con el asistente. Verifica que Ollama esté ejecutándose.");
         } finally {
             setIsLoading(false);
         }

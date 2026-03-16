@@ -1,9 +1,61 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { agent, createAgent } from '@/lib/ai/agent'
 import { ChatMessage } from '@/lib/ai/types'
+import { decrypt } from '@/lib/auth-utils'
+
+interface SessionPayload {
+  id: number
+  email: string
+  name: string
+  lastName: string
+  role: string
+  mustChangePassword: boolean
+}
+
+/**
+ * Verifica la sesión del usuario desde la cookie
+ * @returns La sesión decodificada o null si no es válida
+ */
+async function verifySession(request: NextRequest): Promise<SessionPayload | null> {
+  const sessionCookie = request.cookies.get('session')
+  if (!sessionCookie) {
+    return null
+  }
+
+  try {
+    const session = await decrypt(sessionCookie.value) as SessionPayload | null
+    return session
+  } catch {
+    return null
+  }
+}
+
+/**
+ * Verifica que el usuario sea administrador
+ */
+function isAdmin(session: SessionPayload | null): boolean {
+  return session?.role === 'ADMIN'
+}
 
 export async function POST(request: NextRequest) {
   try {
+    // Verificar autenticación
+    const session = await verifySession(request)
+    if (!session) {
+      return NextResponse.json(
+        { error: 'No autorizado. Debe iniciar sesión.' },
+        { status: 401 }
+      )
+    }
+
+    // Verificar autorización (solo ADMIN)
+    if (!isAdmin(session)) {
+      return NextResponse.json(
+        { error: 'Acceso denegado. Se requiere rol de administrador.' },
+        { status: 403 }
+      )
+    }
+
     const body = await request.json()
 
     // Validar input
@@ -40,6 +92,23 @@ export async function POST(request: NextRequest) {
 
 // Endpoint para streaming
 export async function GET(request: NextRequest) {
+  // Verificar autenticación
+  const session = await verifySession(request)
+  if (!session) {
+    return NextResponse.json(
+      { error: 'No autorizado. Debe iniciar sesión.' },
+      { status: 401 }
+    )
+  }
+
+  // Verificar autorización (solo ADMIN)
+  if (!isAdmin(session)) {
+    return NextResponse.json(
+      { error: 'Acceso denegado. Se requiere rol de administrador.' },
+      { status: 403 }
+    )
+  }
+
   const searchParams = request.nextUrl.searchParams
   const message = searchParams.get('message')
 
