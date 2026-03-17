@@ -98,10 +98,10 @@ export default function AdminLayout({
     const navigation: NavItem[] = [
         { name: 'Panel General', href: '/admin/dashboard', icon: BarChart3, color: 'group-hover:text-blue-400' },
         { name: 'Asistente IA', href: '/admin/dashboard/asistente', icon: Sparkles, color: 'group-hover:text-purple-400' },
-        { name: 'Configurar Roles/CRUD', href: '/admin/dashboard/roles', icon: Shield, color: 'group-hover:text-indigo-400' },
-        { name: 'Gestión de Usuarios', href: '/admin/dashboard/usuarios', icon: Users, color: 'group-hover:text-blue-400' },
         { name: 'Estructura Geográfica', href: '/admin/dashboard/geografia', icon: MapPin, color: 'group-hover:text-emerald-400' },
         { name: 'Jerarquía de Liderazgo', href: '/admin/dashboard/jerarquia', icon: Network, color: 'group-hover:text-blue-400' },
+        { name: 'Configurar Roles', href: '/admin/dashboard/roles', icon: Shield, color: 'group-hover:text-indigo-400' },
+        { name: 'Gestión de Usuarios', href: '/admin/dashboard/usuarios', icon: Users, color: 'group-hover:text-blue-400' },
     ];
 
     const handleLogout = async () => {
