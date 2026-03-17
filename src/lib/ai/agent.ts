@@ -152,6 +152,7 @@ export class Agent {
     const lines: string[] = []
 
     for (const { name, result } of results) {
+      console.log(result)
       switch (name) {
         // === PERSONAS ===
         case 'buscar_persona':
