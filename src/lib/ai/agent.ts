@@ -85,6 +85,11 @@ export class Agent {
     messages: ChatMessage[],
     onToolCall?: (name: string, args: Record<string, unknown>) => void
   ): Promise<AgentResponse> {
+    console.log('=== AGENT DEBUG ===')
+    console.log('Model:', this.model)
+    console.log('Messages:', messages)
+    console.log('Tools count:', this.toolDefinitions.length)
+
     const response = await ollama.chat({
       model: this.model,
       messages: [
@@ -94,33 +99,54 @@ export class Agent {
       tools: this.toolDefinitions,
     })
 
+    console.log('Ollama response:', JSON.stringify(response, null, 2))
+
     const message = response.message
 
     // Si el modelo quiere usar una tool
     if (message.tool_calls && message.tool_calls.length > 0) {
+      console.log('Tool calls detected:', message.tool_calls.length)
       const toolCallsResults = []
 
       for (const toolCall of message.tool_calls) {
+        console.log('Processing tool call:', toolCall.function.name)
+        console.log('Raw arguments:', toolCall.function.arguments)
+
         const toolName = toolCall.function.name
         const toolArgs = toolCall.function.arguments as Record<string, unknown>
 
         // Buscar la tool correspondiente
         const tool = this.tools.find(t => t.name === toolName)
         if (!tool) {
+          console.error('Tool not found:', toolName)
           continue
         }
 
+        // Pre-procesar argumentos: convertir strings numéricos a números
+        const processedArgs: Record<string, unknown> = {}
+        for (const [key, value] of Object.entries(toolArgs)) {
+          if (typeof value === 'string' && /^\d+$/.test(value)) {
+            processedArgs[key] = parseInt(value, 10)
+          } else {
+            processedArgs[key] = value
+          }
+        }
+
         // Validar argumentos con Zod
-        const parsedArgs = tool.parameters.safeParse(toolArgs)
+        const parsedArgs = tool.parameters.safeParse(processedArgs)
         if (!parsedArgs.success) {
+          console.error('Validation error:', parsedArgs.error)
           continue
         }
+
+        console.log('Validated args:', parsedArgs.data)
 
         // Notificar si hay callback
         onToolCall?.(toolName, toolArgs)
 
         // Ejecutar la tool
         const result = await tool.execute(toolArgs)
+        console.log('Tool result:', result)
         toolCallsResults.push({
           name: toolName,
           args: toolArgs,
@@ -142,6 +168,7 @@ export class Agent {
       }
     }
 
+    console.log('No tool calls, returning message:', message.content)
     return {
       message: message.content,
     }
