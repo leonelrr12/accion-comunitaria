@@ -1,14 +1,43 @@
 services:
   db:
-    image: postgres
+    image: postgres:16
     container_name: comunitaria-db
-    restart: always
+    restart: unless-stopped
     ports:
       - "5432:5432"
     environment:
-      - POSTGRES_USER=postgres
-      - POSTGRES_PASSWORD=admin
-      - POSTGRES_DB=db_comuna
+      POSTGRES_DB: db_comuna
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d $${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 15s
+
+  api:
+    build: .
+    depends_on:
+      db:
+        condition: service_healthy
+    restart: unless-stopped
+    ports:
+      - "3000:3000"     # ← Agrega esto si quieres acceder desde el navegador
+    env_file:
+      - .env
+    environment:
+      # ←←← CORREGIDO aquí
+      DATABASE_URL: "postgresql://postgres:admin@db:5432/db_comuna?schema=public&connect_timeout=60"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
 
   pgadmin4:
     image: dpage/pgadmin4
@@ -20,4 +49,8 @@ services:
     ports:
       - "80:80"
     depends_on:
-      - db
+      db:
+        condition: service_healthy
+
+volumes:
+  postgres_data:
