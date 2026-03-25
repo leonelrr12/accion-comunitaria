@@ -1,6 +1,8 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: 'standalone',   // ← Esta es la línea más importante para el Docker
+  
   async headers() {
     return [
       {
