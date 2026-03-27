@@ -7,6 +7,14 @@ import Link from "next/link";
 import { getAllUsers } from "../../actions/users";
 import { getAllAffiliates } from "../..//actions/affiliates";
 
+type User = {
+  id: string;
+  role: {
+    name: string;
+  };
+  // agrega aquí otros campos si los tienes
+};
+
 export default function AdminDashboard() {
     const currentUser = useAppStore((state) => state.currentUser);
     const [lideresCount, setLideresCount] = useState(0);
@@ -20,7 +28,7 @@ export default function AdminDashboard() {
             try {
                 const dbUsers = await getAllUsers();
                 // En nuestra lógica actual, los líderes son todos menos ADMIN
-                const onlyLideres = dbUsers.filter(u => u.role.name !== "ADMIN");
+                const onlyLideres = dbUsers.filter((u: User) => u.role.name !== "ADMIN");
                 setLideresCount(onlyLideres.length);
                 setLideres(onlyLideres);
 
