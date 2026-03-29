@@ -8,7 +8,7 @@ import { getAllUsers } from "../../actions/users";
 import { getAllAffiliates } from "../..//actions/affiliates";
 
 type User = {
-  id: string;
+  id: number;
   role: {
     name: string;
   };
