@@ -5,6 +5,7 @@ export const prisma = new PrismaClient();
 
 async function main() {
     console.log("🌱 Iniciando sembrado de base de datos...");
+    console.log("DATABASE_URL:", process.env.DATABASE_URL);
 
     // 1. Crear Roles Iniciales
     const roles = [
