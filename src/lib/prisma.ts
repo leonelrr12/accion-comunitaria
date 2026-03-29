@@ -3,9 +3,13 @@ import { PrismaClient } from '@prisma/client';
 import { PrismaPg } from "@prisma/adapter-pg";
 import pg from "pg";
 
+const connectionString = process.env.DATABASE_URL;
+if (!connectionString) {
+  throw new Error('DATABASE_URL no está definida');
+}
+
 const pool = new pg.Pool({
-  connectionString: process.env.DATABASE_URL,
-  // Opcional: mejor rendimiento en producción
+  connectionString,
   max: 10,
   idleTimeoutMillis: 30000,
   connectionTimeoutMillis: 10000,
@@ -27,3 +31,5 @@ export const prisma = globalForPrisma.prisma ?? new PrismaClient({
 if (process.env.NODE_ENV !== "production") {
   globalForPrisma.prisma = prisma;
 }
+
+export default prisma;
