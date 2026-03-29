@@ -27,3 +27,10 @@ npx prisma migrate deploy  # Aplicar estructura final
 npx prisma generate     # Generar cliente
 npx prisma db seed      # (Opcional) cargar datos iniciales
 ```
+
+# Nginx
+
+```bash
+systemctl restart nginx
+systemctl status nginx.service
+```
