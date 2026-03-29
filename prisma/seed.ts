@@ -1,7 +1,8 @@
 import "dotenv/config";
-import { PrismaClient } from "@prisma/client";
+//import { PrismaClient } from "@prisma/client";
+import { prisma } from '../src/lib/prisma';  
 
-export const prisma = new PrismaClient();
+//export const prisma = new PrismaClient();
 
 async function main() {
     console.log("🌱 Iniciando sembrado de base de datos...");
