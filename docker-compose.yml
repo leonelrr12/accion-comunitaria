@@ -47,7 +47,7 @@ services:
       - PGADMIN_DEFAULT_EMAIL=guasimo12@gmail.com
       - PGADMIN_DEFAULT_PASSWORD=admin_1204
     ports:
-      - "80:80"
+      - "8080:80"
     depends_on:
       db:
         condition: service_healthy
