@@ -1,8 +1,8 @@
 module.exports = {
   apps: [
     {
-      name: "comunitaria-api",
-      script: "./server.js", // Archivo generado por output: 'standalone'
+      name: "comunitaria-app",
+      script: ".next/standalone/server.js",
       instances: "max", // Usa todos los núcleos disponibles
       exec_mode: "cluster", // Modo cluster (mejor rendimiento)
       autorestart: true,

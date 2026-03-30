@@ -21,7 +21,7 @@ services:
 
   api:
     build: .
-    container_name: comunitaria-api
+    container_name: comunitaria-app
     depends_on:
       db:
         condition: service_healthy
