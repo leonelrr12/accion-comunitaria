@@ -1,6 +1,37 @@
 import { z } from 'zod'
 import { prisma } from '../prisma'
 import { Tool } from '../types'
+import { Timestamp } from 'next/dist/server/lib/cache-handlers/types';
+
+type Role = {
+  id: number;
+  name: string;
+  description?: string | null;
+  _count: {
+    users: number;
+  }
+}
+
+type User = {
+  id: number;
+  name: string;
+  lastName: string;
+  email: string;
+  role: {
+    name: string;
+  };
+  community: number;
+  afiliados: number;
+  createdAt: Timestamp
+};
+
+type Community = {
+  communityId?: number | null;
+  _count: {
+    id: number;
+  }
+}
+
 
 // Buscar usuario por nombre o email
 export const buscarUsuario: Tool = {
@@ -25,7 +56,7 @@ export const buscarUsuario: Tool = {
         _count: { select: { persons: true } },
       },
     })
-    return results.map((u) => ({
+    return results.map((u: any) => ({
       id: u.id,
       name: u.name,
       lastName: u.lastName,
@@ -71,7 +102,7 @@ export const listarUsuarios: Tool = {
     ])
 
     return {
-      usuarios: usuarios.map((u) => ({
+      usuarios: usuarios.map((u: any) => ({
         id: u.id,
         name: u.name,
         lastName: u.lastName,
@@ -161,12 +192,12 @@ export const estadisticasUsuario: Tool = {
     })
 
     const comunidades = await prisma.community.findMany({
-      where: { id: { in: afiliadosPorComunidad.map((a) => a.communityId).filter((id): id is number => id !== null) } },
+      where: { id: { in: afiliadosPorComunidad.map((a: Community) => a.communityId).filter((id: any): id is number => id !== null) } },
       select: { id: true, name: true },
     })
 
-    const distribucion = afiliadosPorComunidad.map((a) => {
-      const comunidad = comunidades.find((c) => c.id === a.communityId)
+    const distribucion = afiliadosPorComunidad.map((a: Community) => {
+      const comunidad = comunidades.find((c: any) => c.id === a.communityId)
       return {
         comunidad: comunidad?.name ?? 'Sin comunidad',
         cantidad: a._count.id,
@@ -197,7 +228,7 @@ export const listarRoles: Tool = {
       },
       orderBy: { name: 'asc' },
     })
-    return roles.map((r) => ({
+    return roles.map((r: Role) => ({
       id: r.id,
       name: r.name,
       description: r.description,
