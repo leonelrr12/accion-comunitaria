@@ -14,7 +14,13 @@ nano /etc/nginx/sites-enabled/default
 # Comandos Docker
 
 ````bash
-docker container run -dp 3000:3000 comuna-app```
+docker container run -dp 3000:3000 comuna-app
+
+## --rm borre la imagen una ver cargada
+docker run --rm -d -name comuna-app -p 3000:3000 comuna-app
+
+## Crear imagen segun especificaciones del Dokerfile
+docker build -t comuna-app:v1.0 -f Dockerfile-uno .
 
 
 ```bash
@@ -22,9 +28,11 @@ docker compose down
 docker compose up --build --force-recreate
 docker compose up -d api
 
-docker-compose down
-docker-compose build --no-cache
-docker-compose up -d
+docker compose down
+docker compose build --no-cache
+docker compose up -d
+
+docker compose -f docker-compose.db.yml up -d
 
 
 docker exec -it {container name} sh
