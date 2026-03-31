@@ -1,9 +1,31 @@
+# NGINX
+
+```bash
+sudo systemctl stop nginx
+sudo systemctl start nginx
+sudo systemctl reload nginx
+sudo systemctl restart nginx
+sudo systemctl status nginx
+
+nano /etc/nginx/sites-enabled/default
+
+```
+
 # Comandos Docker
+
+````bash
+docker container run -dp 3000:3000 comuna-app```
+
 
 ```bash
 docker compose down
 docker compose up --build --force-recreate
 docker compose up -d api
+
+docker-compose down
+docker-compose build --no-cache
+docker-compose up -d
+
 
 docker exec -it {container name} sh
 docker logs -f {container name}
@@ -11,7 +33,7 @@ docker logs -f {container name}
 npx prisma generate
 npx prisma migrate dev --name nombre-de-la-migracion
 npx prisma db seed
-```
+````
 
 # ✅ RESET TOTAL (BORRA TODO)
 

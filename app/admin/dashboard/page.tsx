@@ -15,8 +15,6 @@ type User = {
   // agrega aquí otros campos si los tienes
 };
 
-console.log("AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA")
-
 export default function AdminDashboard() {
     const currentUser = useAppStore((state) => state.currentUser);
     const [lideresCount, setLideresCount] = useState(0);
