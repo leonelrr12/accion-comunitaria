@@ -36,8 +36,6 @@ services:
       # ←←← CORREGIDO aquí
       DATABASE_URL: "postgresql://postgres:admin@db:5432/db_comuna?schema=public&connect_timeout=60"
       NODE_ENV: environment
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER} -d ${POSTGRES_DB}"]
       interval: 10s
@@ -45,5 +43,5 @@ services:
       retries: 5
 
 
-volumes:
-  postgres_data:
+#volumes:
+#  postgres_data:
