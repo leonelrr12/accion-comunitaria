@@ -37,6 +37,7 @@ docker compose build --no-cache
 docker compose up -d
 
 docker compose -f docker-compose.db.yml up -d
+docker compose -f docker-compose.yml up -d
 
 
 docker exec -it {container name} sh
