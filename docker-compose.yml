@@ -24,9 +24,9 @@ services:
       context: .
       dockerfile: Dockerfile
     container_name: comunitaria-app
-    # depends_on:
-    #   db:
-    #     condition: service_healthy
+    depends_on:
+      db:
+        condition: service_healthy
     restart: unless-stopped
     ports:
       - "3000:3000"     # ← Agrega esto si quieres acceder desde el navegador
