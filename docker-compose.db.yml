@@ -4,9 +4,9 @@ services:
     container_name: comunitaria-db
     restart: unless-stopped
     environment:
-      POSTGRES_DB: ${DB_NAME}
-      POSTGRES_USER: ${DB_USER}
-      POSTGRES_PASSWORD: ${DB_PASSWORD} 
+      POSTGRES_DB: db_comuna
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: admin
     volumes:
       - postgres_data:/var/lib/postgresql/data
     ports:
