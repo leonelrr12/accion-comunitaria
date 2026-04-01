@@ -1,5 +1,9 @@
 # NGINX
 
+````bash
+curl -X GET http://localhost:8080/api/route
+
+
 ```bash
 sudo systemctl stop nginx
 sudo systemctl start nginx
@@ -9,14 +13,14 @@ sudo systemctl status nginx
 
 nano /etc/nginx/sites-enabled/default
 
-```
+````
 
 # Comandos Docker
 
 ````bash
 docker container run -dp 3000:3000 comuna-app
 
-## --rm borre la imagen una ver cargada
+## --rm borre el container una vez sea terminado
 docker run --rm -d -name comuna-app -p 3000:3000 comuna-app
 
 ## Crear imagen segun especificaciones del Dokerfile
