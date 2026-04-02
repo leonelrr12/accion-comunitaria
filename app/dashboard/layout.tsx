@@ -118,7 +118,7 @@ export default function DashboardLayout({
     const navigation: NavItem[] = [
         { name: 'Panel Principal', href: '/dashboard', icon: LayoutDashboard },
         { name: 'Gestión de Afiliados', href: '/dashboard/afiliados', icon: Users },
-        { name: 'Mi Configuración', href: '#', icon: Settings },
+        { name: 'Mi Configuración', href: '/dashboard/configuracion', icon: Settings },
     ];
 
     const handleLogout = async () => {

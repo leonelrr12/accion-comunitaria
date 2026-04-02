@@ -17,8 +17,8 @@ export default function CrearLider() {
         lastName: "",
         email: "",
         phone: "",
-        provinceId: "",
-        districtId: "",
+        provinceId: "8",    // Panamá
+        districtId: "2",    // San Miguelito
         corregimientoId: "",
         communityId: "",
         role: "Lider de Zona",
