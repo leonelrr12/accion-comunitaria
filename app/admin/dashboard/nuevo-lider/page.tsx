@@ -5,7 +5,7 @@ import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { LocationSelector } from "../../../../components/ui/LocationSelector";
 import { createUserAction, getAllUsers } from "../../../actions/users";
-import { ArrowRight, Loader2, UserCircle, MapPin, Network, ArrowLeft } from "lucide-react";
+import { Loader2, MapPin, Network, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
 export default function CrearLider() {
