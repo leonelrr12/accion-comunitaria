@@ -9,17 +9,17 @@ export async function middleware(request: NextRequest) {
     // Security headers are set in next.config.ts
 
     // Public routes that don't require authentication
-    const publicRoutes = ["/login", "/registro", "/api/auth"];
-    const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
+    // const publicRoutes = ["/login", "/registro", "/api/auth"];
+    // const isPublicRoute = publicRoutes.some((route) => pathname.startsWith(route));
 
     // Protected routes
     const isAdminRoute = pathname.startsWith("/admin");
     const isDashboardRoute = pathname.startsWith("/dashboard");
 
     // Decrypt session
-    console.log("Cookie encontrada:", !!sessionCookie);
+    //console.log("Cookie encontrada:", !!sessionCookie);
     const session = sessionCookie ? await decrypt(sessionCookie.value) : null;
-    console.log("Sesión decodificada:", !!session);
+    //console.log("Sesión decodificada:", !!session);
 
     // Allow access to password change only if logged in and must change password
     if (pathname.startsWith("/cambiar-password")) {

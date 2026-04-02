@@ -9,7 +9,7 @@ module.exports = {
       watch: false,
       max_memory_restart: "800M", // Reinicia si usa mucha memoria
       env: {
-        NODE_ENV: "production12",
+        NODE_ENV: "production",
         PORT: 3000,
       },
       // Opcional: logs más limpios
