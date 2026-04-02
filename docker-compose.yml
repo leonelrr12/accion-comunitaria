@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:16-bookworm
+    image: postgres:16.2-bookworm
     container_name: comunitaria-db
     restart: unless-stopped
     environment:
