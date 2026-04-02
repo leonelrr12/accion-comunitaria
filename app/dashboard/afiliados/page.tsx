@@ -2,7 +2,7 @@
 
 import { useAppStore } from "@/lib/store";
 import { useState, useEffect, useCallback } from "react";
-import { UserPlus, Loader2 } from "lucide-react";
+import { UserPlus, Loader2, Eye } from "lucide-react";
 import Link from "next/link";
 import { getAffiliates, getAllAffiliates } from "../../actions/affiliates";
 import { mapPersonFromDB } from "@/lib/mappers";
@@ -143,6 +143,7 @@ export default function Afiliados() {
                                         <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Cédula / ID</th>
                                         <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Contacto</th>
                                         <th scope="col" className="px-6 py-4 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Ubicación</th>
+                                        <th scope="col" className="relative px-6 py-4"><span className="sr-only">Ver</span></th>
                                     </tr>
                                 </thead>
                                 <tbody className="bg-white divide-y divide-gray-100">
@@ -166,6 +167,12 @@ export default function Afiliados() {
                                             </td>
                                             <td className="px-6 py-4 whitespace-nowrap text-sm text-slate-500">
                                                 {getLocationName(person)}
+                                            </td>
+                                            <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                                                <Link href={`/dashboard/afiliados/${person.id}`} className="text-blue-600 hover:text-blue-900 inline-flex items-center gap-1 font-bold bg-blue-50 px-3 py-1.5 rounded-lg hover:bg-blue-100 transition-colors">
+                                                    <Eye className="h-4 w-4" />
+                                                    Ver Perfil
+                                                </Link>
                                             </td>
                                         </tr>
                                     ))}

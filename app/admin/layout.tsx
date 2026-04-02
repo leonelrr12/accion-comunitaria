@@ -4,7 +4,7 @@ import { useAppStore } from "@/lib/store";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Users, Shield, LogOut, ShieldCheck, BarChart3, MapPin, Network, Menu, X, Sparkles } from "lucide-react";
+import { Users, Shield, LogOut, ShieldCheck, BarChart3, MapPin, Network, Menu, X, Sparkles, Activity } from "lucide-react";
 import { logoutAction } from "../actions/auth";
 
 logoutAction
@@ -116,6 +116,7 @@ export default function AdminLayout({
         { name: 'Jerarquía de Liderazgo', href: '/admin/dashboard/jerarquia', icon: Network, color: 'group-hover:text-blue-400' },
         { name: 'Configurar Roles', href: '/admin/dashboard/roles', icon: Shield, color: 'group-hover:text-indigo-400' },
         { name: 'Gestión de Usuarios', href: '/admin/dashboard/usuarios', icon: Users, color: 'group-hover:text-blue-400' },
+        { name: 'Audit Log', href: '/admin/dashboard/auditoria', icon: Activity, color: 'group-hover:text-amber-400' },
     ];
 
     const handleLogout = async () => {

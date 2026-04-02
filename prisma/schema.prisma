@@ -93,6 +93,7 @@ model User {
   district        District?       @relation(fields: [districtId], references: [id])
   province        Province?       @relation(fields: [provinceId], references: [id])
   role            Role            @relation(fields: [roleId], references: [id])
+  auditLogs       AuditLog[]
 
   @@map("users")
 }
@@ -130,4 +131,16 @@ model Person {
   province        Province?      @relation(fields: [provinceId], references: [id])
 
   @@map("persons")
+}
+
+model AuditLog {
+  id        Int      @id @default(autoincrement())
+  userId    Int?
+  action    String
+  details   String
+  ipAddress String?
+  createdAt DateTime @default(now())
+  user      User?    @relation(fields: [userId], references: [id])
+
+  @@map("audit_logs")
 }
