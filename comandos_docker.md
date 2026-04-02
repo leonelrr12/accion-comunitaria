@@ -15,8 +15,6 @@ ln: 113 auth.ts
 ````bash
 curl -X GET http://localhost:8080/api/route
 
-docker exec -it tu_contenedor pg_dump -U postgres -Fc db_comuna > db_comuna_backup_$(date +%Y%m%d).dump
-
 
 CREATE DATABASE db_comuna
 WITH ENCODING 'UTF8'
@@ -25,7 +23,10 @@ WITH ENCODING 'UTF8'
      TEMPLATE template0;
 
 
+docker exec -it tu_contenedor pg_dump -U postgres -Fc db_comuna > db_comuna_backup_$(date +%Y%m%d).dump
 docker exec -i tu_contenedor pg_restore -U postgres -d db_comuna db_comuna_backup_xxxx.dump
+
+
 
 Si usas PM2: pm2 logs
 Si usas Docker: docker logs [nombre_contenedor]

@@ -8,7 +8,7 @@ datasource db {
 }
 
 model Province {
-  id        Int        @id @default(autoincrement())
+  id        Int      @id @unique 
   name      String
   createdAt DateTime   @default(now())
   districts District[]
@@ -19,7 +19,7 @@ model Province {
 }
 
 model District {
-  id             Int             @id @default(autoincrement())
+  id             Int     @unique 
   provinceId     Int
   name           String
   createdAt      DateTime        @default(now())
@@ -32,7 +32,7 @@ model District {
 }
 
 model Corregimiento {
-  id          Int         @id @default(autoincrement())
+  id          Int     @id @unique 
   districtId  Int
   name        String
   createdAt   DateTime    @default(now())
@@ -45,7 +45,7 @@ model Corregimiento {
 }
 
 model Community {
-  id              Int           @id @default(autoincrement())
+  id              Int      @id @unique 
   corregimientoId Int
   name            String
   createdAt       DateTime      @default(now())
