@@ -1,3 +1,15 @@
+# HTTPS
+
+```bash
+Solo un último consejo de "buen compañero":
+Si en el futuro decides ponerle un dominio y activar el SSL (HTTPS) con Certbot, recuerda volver a cambiar secure: true y useSecureCookies: true. Esto protegerá la sesión de tus usuarios para que no pueda ser interceptada.
+
+
+ln: 113 auth.ts
+          secure: false, //process.env.NODE_ENV === "production",
+
+```
+
 # NGINX
 
 ````bash
