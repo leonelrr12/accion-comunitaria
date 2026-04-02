@@ -89,7 +89,7 @@ export default function GestionUsuarios() {
             if (result.success) {
                 await refreshData();
                 setAdminData({ name: "", lastName: "", email: "", password: "", phone: "", role: "ADMIN", parentLeaderId: "" });
-                toast.success("Usuario creado exitosamente");
+                toast.success(`Usuario creado exitosamente. Clave temporal: ${result.tempPassword}`, { duration: 20000 });
             } else {
                 toast.error("Error al crear usuario: " + result.error);
             }
@@ -199,17 +199,7 @@ export default function GestionUsuarios() {
                             onChange={(e) => setAdminData({ ...adminData, email: e.target.value })}
                         />
                     </div>
-                    <div className="space-y-2">
-                        <label className="text-sm font-semibold text-slate-700">Contraseña</label>
-                        <input
-                            type="password"
-                            required
-                            disabled={isPending}
-                            className="w-full p-3 border border-gray-200 rounded-xl bg-slate-50 focus:ring-2 focus:ring-blue-500 outline-none"
-                            value={adminData.password}
-                            onChange={(e) => setAdminData({ ...adminData, password: e.target.value })}
-                        />
-                    </div>
+
                     <div className="space-y-2">
                         <label className="text-sm font-semibold text-slate-700">Rol del Usuario</label>
                         <select

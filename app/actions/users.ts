@@ -78,8 +78,8 @@ export async function createUserAction(data: CreateUserInput) {
             ? `${data.name.substring(0, 2).toUpperCase()}${Math.floor(1000 + Math.random() * 9000)}`
             : null;
 
-        const isTempPassword = !data.password;
-        const passwordToHash = data.password || Math.random().toString(36).substring(2, 10);
+        const isTempPassword = true; //!data.password;
+        const passwordToHash = "123456"; //data.password || Math.random().toString(36).substring(2, 10);
         const passwordHash = await bcrypt.hash(passwordToHash, 12);
 
         const newUser = await prisma.user.create({

@@ -1,8 +1,7 @@
 "use client";
 
 import { useState, useEffect, useTransition } from "react";
-import { useAppStore } from "@/lib/store";
-import { useRouter, useSearchParams } from "next/navigation";
+import { useSearchParams } from "next/navigation";
 import { Suspense } from "react";
 import { LocationSelector } from "../../components/ui/LocationSelector";
 import { getUserByInviteCode } from "../actions/users";
@@ -10,7 +9,6 @@ import { createAffiliate } from "../actions/affiliates";
 import { Loader2, CheckCircle, ShieldCheck, Users } from "lucide-react";
 
 function RegistroForm() {
-    const router = useRouter();
     const searchParams = useSearchParams();
     const refCode = searchParams.get("ref");
     const [isPending, startTransition] = useTransition();
