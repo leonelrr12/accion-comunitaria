@@ -17,7 +17,9 @@ export async function middleware(request: NextRequest) {
     const isDashboardRoute = pathname.startsWith("/dashboard");
 
     // Decrypt session
+    console.log("Cookie encontrada:", !!sessionCookie);
     const session = sessionCookie ? await decrypt(sessionCookie.value) : null;
+    console.log("Sesión decodificada:", !!session);
 
     // Allow access to password change only if logged in and must change password
     if (pathname.startsWith("/cambiar-password")) {
