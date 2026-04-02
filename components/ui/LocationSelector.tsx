@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import {
     getProvinces,
     getDistricts,
@@ -39,53 +39,81 @@ export function LocationSelector({
 
     const [loading, setLoading] = useState(false);
 
-    // Fetch Provinces on mount
-    useEffect(() => {
-        const fetchInitial = async () => {
-            const data = await getProvinces();
-            setProvinces(data);
-        };
-        fetchInitial();
-    }, []);
+    // Skip cascade effects on first mount (init useEffect already handles pre-loading)
+    const isMounted = useRef(false);
 
-    // Fetch Districts when Province changes
+    // Refs to track initial values (avoid re-running cascade on mount)
+    const initialProvinceId = provinceId;
+    const initialDistrictId = districtId;
+    const initialCorregimientoId = corregimientoId;
+
+    // On mount: load provinces and (if we have initial values) load all dependent lists in parallel
     useEffect(() => {
+        const init = async () => {
+            setLoading(true);
+            const provincesData = await getProvinces();
+            setProvinces(provincesData);
+
+            // If we have an initial provinceId, pre-load districts
+            if (initialProvinceId) {
+                const districtsData = await getDistricts(parseInt(initialProvinceId));
+                setDistricts(districtsData);
+
+                // If we have an initial districtId, pre-load corregimientos
+                if (initialDistrictId) {
+                    const corData = await getCorregimientos(parseInt(initialDistrictId));
+                    setCorregimientos(corData);
+
+                    // If we have an initial corregimientoId, pre-load communities
+                    if (initialCorregimientoId) {
+                        const comData = await getCommunities(parseInt(initialCorregimientoId));
+                        setCommunities(comData);
+                    }
+                }
+            }
+            setLoading(false);
+        };
+        init();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []); // only on mount
+
+    // Fetch Districts when Province changes (skip on first mount)
+    useEffect(() => {
+        if (!isMounted.current) return;
         if (provinceId) {
-            const fetchDistricts = async () => {
-                const data = await getDistricts(parseInt(provinceId));
-                setDistricts(data);
-            };
-            fetchDistricts();
+            getDistricts(parseInt(provinceId)).then(setDistricts);
         } else {
             setDistricts([]);
+            setCorregimientos([]);
+            setCommunities([]);
         }
     }, [provinceId]);
 
-    // Fetch Corregimientos when District changes
+    // Fetch Corregimientos when District changes (skip on first mount)
     useEffect(() => {
+        if (!isMounted.current) return;
         if (districtId) {
-            const fetchCor = async () => {
-                const data = await getCorregimientos(parseInt(districtId));
-                setCorregimientos(data);
-            };
-            fetchCor();
+            getCorregimientos(parseInt(districtId)).then(setCorregimientos);
         } else {
             setCorregimientos([]);
+            setCommunities([]);
         }
     }, [districtId]);
 
-    // Fetch Communities when Corregimiento changes
+    // Fetch Communities when Corregimiento changes (skip on first mount)
     useEffect(() => {
+        if (!isMounted.current) return;
         if (corregimientoId) {
-            const fetchCom = async () => {
-                const data = await getCommunities(parseInt(corregimientoId));
-                setCommunities(data);
-            };
-            fetchCom();
+            getCommunities(parseInt(corregimientoId)).then(setCommunities);
         } else {
             setCommunities([]);
         }
     }, [corregimientoId]);
+
+    // Mark as mounted after all init effects have run
+    useEffect(() => {
+        isMounted.current = true;
+    }, []);
 
     return (
         <div className="space-y-6">

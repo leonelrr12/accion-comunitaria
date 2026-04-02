@@ -140,9 +140,16 @@ export default function NuevoAfiliado() {
 
                     <div className="pt-8">
                         <div>
-                            <h3 className="text-lg font-bold text-slate-900">Ubicación Asignada</h3>
+                            <h3 className="text-lg font-bold text-slate-900 flex items-center gap-2">
+                                Ubicación Asignada
+                                {currentUser.provinceId && (
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 bg-emerald-50 text-emerald-700 text-[11px] font-bold rounded-full border border-emerald-100">
+                                        ✓ Pre-rellenada desde tu cuenta
+                                    </span>
+                                )}
+                            </h3>
                             <p className="mt-1 text-sm text-slate-500 mb-6">
-                                El afiliado quedará registrado en este sector específico.
+                                El afiliado quedará registrado en este sector. Puedes modificarlo si es necesario.
                             </p>
                         </div>
                         <div className="bg-blue-50/50 p-6 rounded-2xl border border-blue-100">

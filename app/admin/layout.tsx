@@ -1,7 +1,7 @@
 "use client";
 
 import { useAppStore } from "@/lib/store";
-import { useRouter } from "next/navigation";
+import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Users, Shield, LogOut, ShieldCheck, BarChart3, MapPin, Network, Menu, X, Sparkles } from "lucide-react";
@@ -18,11 +18,13 @@ interface NavItem {
 function SidebarContent({
     navigation,
     currentUser,
-    onLogout
+    onLogout,
+    pathname
 }: {
     navigation: NavItem[];
     currentUser: { name: string; lastName: string };
     onLogout: () => void;
+    pathname: string;
 }) {
     return (
         <div className="h-full flex flex-col bg-slate-900">
@@ -31,16 +33,26 @@ function SidebarContent({
                 <h1 className="text-xl font-bold text-white tracking-tight">Admin Console</h1>
             </div>
             <nav className="flex-1 px-4 py-6 space-y-2 overflow-y-auto custom-scrollbar">
-                {navigation.map((item) => (
-                    <Link
-                        key={item.name}
-                        href={item.href}
-                        className="flex items-center px-3 py-2.5 text-sm font-medium rounded-lg text-slate-300 hover:bg-slate-800 hover:text-white group transition-colors"
-                    >
-                        <item.icon className={`mr-3 h-5 w-5 text-slate-400 ${item.color}`} />
-                        {item.name}
-                    </Link>
-                ))}
+                {navigation.map((item) => {
+                    const isActive = pathname === item.href || (item.href !== '/admin/dashboard' && pathname.startsWith(item.href));
+                    return (
+                        <Link
+                            key={item.name}
+                            href={item.href}
+                            className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-lg group transition-all duration-200 ${
+                                isActive
+                                    ? 'bg-slate-800 text-white'
+                                    : 'text-slate-300 hover:bg-slate-800 hover:text-white'
+                            }`}
+                        >
+                            <item.icon className={`mr-3 h-5 w-5 transition-colors ${
+                                isActive ? 'text-white' : `text-slate-400 ${item.color}`
+                            }`} />
+                            {item.name}
+                            {isActive && <span className="ml-auto w-1.5 h-1.5 rounded-full bg-blue-400" />}
+                        </Link>
+                    );
+                })}
             </nav>
             <div className="p-4 bg-slate-950 border-t border-slate-800">
                 <div className="flex items-center">
@@ -74,6 +86,7 @@ export default function AdminLayout({
     const currentUser = useAppStore((state) => state.currentUser);
     const logout = useAppStore((state) => state.logout);
     const router = useRouter();
+    const pathname = usePathname();
     const [mounted, setMounted] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
@@ -132,14 +145,14 @@ export default function AdminLayout({
                 <div className="md:hidden fixed inset-0 z-[60] flex">
                     <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md" onClick={() => setIsMobileMenuOpen(false)}></div>
                     <aside className="relative w-[280px] bg-slate-900 text-white shadow-2xl h-full animate-in slide-in-from-left duration-300 border-r border-slate-800">
-                        <SidebarContent navigation={navigation} currentUser={currentUser} onLogout={handleLogout} />
+                        <SidebarContent navigation={navigation} currentUser={currentUser} onLogout={handleLogout} pathname={pathname} />
                     </aside>
                 </div>
             )}
 
             {/* Desktop Sidebar */}
             <aside className="w-64 bg-slate-900 border-r border-slate-800 hidden md:block text-white sticky top-0 h-screen flex-shrink-0 shadow-xl">
-                <SidebarContent navigation={navigation} currentUser={currentUser} onLogout={handleLogout} />
+                <SidebarContent navigation={navigation} currentUser={currentUser} onLogout={handleLogout} pathname={pathname} />
             </aside>
 
             {/* Main content */}
