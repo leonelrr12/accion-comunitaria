@@ -4,7 +4,7 @@ import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
-import { MapPin, Users, Activity, Menu, X, ArrowRight, ChevronRight, CheckCircle2 } from "lucide-react";
+import { MapPin, Users, Activity, Menu, X, ArrowRight } from "lucide-react";
 
 export default function Home() {
   const currentUser = useAppStore((state) => state.currentUser);

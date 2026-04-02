@@ -15,6 +15,21 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "Acción Comunitaria | Sistema de Gestión",
   description: "Plataforma de gestión comunitaria y liderazgo político.",
+  openGraph: {
+    title: "Acción Comunitaria | Sistema de Gestión",
+    description: "Plataforma de gestión comunitaria y liderazgo político.",
+    url: 'http://147.93.145.67',
+    siteName: 'Tu Red de influencia',
+    images: [
+      {
+        url: 'http://147.93.145', // URL completa a tu imagen en /public
+        width: 1200,
+        height: 630,
+      },
+    ],
+    locale: 'es_ES',
+    type: 'website',
+  },
 };
 
 import { Toaster } from "sonner";
