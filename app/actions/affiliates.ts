@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import type { AffiliateInput } from "@/types";
+import { logAction } from "./audit";
 
 interface GetAffiliatesParams {
     leaderUserId?: number;
@@ -89,10 +90,28 @@ export async function createAffiliate(data: AffiliateInput) {
         revalidatePath("/dashboard/afiliados");
         revalidatePath("/dashboard");
         revalidatePath("/admin/dashboard");
+        await logAction(data.leaderUserId ? Number(data.leaderUserId) : null, "CREATE_AFFILIATE", `Afiliado registrado: ${data.cedula} (${data.name})`);
         return { success: true, person: newPerson };
     } catch (error) {
         console.error("Error creating affiliate:", error);
         const message = error instanceof Error ? error.message : "Error desconocido";
         return { success: false, error: message };
+    }
+}
+
+export async function getAffiliateById(id: number) {
+    try {
+        return await prisma.person.findUnique({
+            where: { id },
+            include: {
+                province: true,
+                district: true,
+                corregimiento: true,
+                community: true,
+            },
+        });
+    } catch (error) {
+        console.error("Error fetching affiliate:", error);
+        return null;
     }
 }

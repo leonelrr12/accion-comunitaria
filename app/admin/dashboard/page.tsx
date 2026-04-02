@@ -1,9 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useAppStore } from "@/lib/store";
-import { UserPlus, Shield, BarChart3, Loader2, Users } from "lucide-react";
+import { UserPlus, Shield, BarChart3, Loader2, Users, Map } from "lucide-react";
 import Link from "next/link";
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from "recharts";
 import { getAllUsers } from "../../actions/users";
 import { getAllAffiliates } from "../..//actions/affiliates";
 
@@ -20,6 +21,7 @@ export default function AdminDashboard() {
     const [lideresCount, setLideresCount] = useState(0);
     const [afiliadosCount, setAfiliadosCount] = useState(0);
     const [lideres, setLideres] = useState<any[]>([]);
+    const [allAfiliadosList, setAllAfiliadosList] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
 
     useEffect(() => {
@@ -34,6 +36,7 @@ export default function AdminDashboard() {
 
                 const allAfiliados = await getAllAffiliates();
                 setAfiliadosCount(allAfiliados.length);
+                setAllAfiliadosList(allAfiliados);
             } catch (err) {
                 console.error("Dashboard error:", err);
             } finally {
@@ -42,6 +45,33 @@ export default function AdminDashboard() {
         };
         fetchDashboardData();
     }, []);
+
+    const chartData = useMemo(() => {
+        if (!allAfiliadosList || allAfiliadosList.length === 0) return [];
+        const counts: Record<string, { fullName: string, count: number }> = {};
+        for (const a of allAfiliadosList) {
+            const corrName = a.corregimiento?.name || "Sin Asignar";
+            
+            // Extraer iniciales para el eje X (ej: "Amelia Denis De Icaza" -> "AD")
+            let initials = "SA";
+            if (corrName !== "Sin Asignar") {
+                const words = corrName.split(" ").filter((w: string) => w.length > 0 && !['de', 'el', 'la', 'los', 'las'].includes(w.toLowerCase()));
+                if (words.length >= 2) {
+                    initials = `${words[0].charAt(0)}${words[1].charAt(0)}`.toUpperCase();
+                } else if (words.length === 1) {
+                    initials = words[0].substring(0, 2).toUpperCase();
+                }
+            }
+
+            if (!counts[initials]) {
+                counts[initials] = { fullName: corrName, count: 0 };
+            }
+            counts[initials].count += 1;
+        }
+        return Object.entries(counts)
+            .map(([name, data]) => ({ name, fullName: data.fullName, count: data.count }))
+            .sort((a, b) => b.count - a.count);
+    }, [allAfiliadosList]);
 
     if (loading) {
         return (
@@ -142,30 +172,56 @@ export default function AdminDashboard() {
                     </div>
                 </div>
 
-                {/* Dashboard Placeholder para Gráfico o Stats adicionales */}
-                <div className="bg-slate-900 p-8 rounded-3xl shadow-xl text-white flex flex-col justify-center">
-                    <div className="flex items-center gap-4 mb-4">
-                        <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center">
-                            <BarChart3 className="h-6 w-6 text-blue-400" />
-                        </div>
-                        <h4 className="text-xl font-black">Estado del Operativo</h4>
+                {/* Dashboard Gráfico Mapeo Geográfico */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex flex-col">
+                    <div className="flex items-center justify-between mb-6">
+                        <h4 className="text-lg font-black text-slate-900 flex items-center gap-2">
+                            <Map className="h-5 w-5 text-emerald-500" />
+                          Corregimiento (San Miguelito)
+                        </h4>
+                        <span className="text-xs font-bold text-slate-500 bg-slate-100 px-3 py-1 rounded-full uppercase tracking-wider">
+                            Total: {afiliadosCount}
+                        </span>
                     </div>
-                    <p className="text-slate-400 text-sm mb-6 leading-relaxed">
-                        Actualmente el sistema está procesando <span className="text-blue-400 font-bold">registros en tiempo real</span>.
-                        Los líderes comunitarios están activos en <span className="text-emerald-400 font-bold">múltiples regiones</span>.
-                    </p>
-                    <div className="space-y-3">
-                        <div className="flex justify-between text-xs font-bold uppercase tracking-widest text-slate-500">
-                            <span>Progreso de Meta</span>
-                            <span>{Math.min(100, (afiliadosCount / 1000) * 100).toFixed(0)}%</span>
-                        </div>
-                        <div className="h-3 w-full bg-white/5 rounded-full overflow-hidden border border-white/10">
-                            <div
-                                className="h-full bg-gradient-to-r from-blue-600 to-emerald-500"
-                                style={{ width: `${Math.min(100, (afiliadosCount / 1000) * 100)}%` }}
-                            />
-                        </div>
-                        <p className="text-[10px] text-slate-500 font-medium">Cálculo basado en meta global de 10,000 registros.</p>
+
+                    <div className="flex-1 min-h-[250px] w-full">
+                        {chartData.length > 0 ? (
+                            <ResponsiveContainer width="100%" height="100%">
+                                <BarChart data={chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                                    <XAxis 
+                                        dataKey="name" 
+                                        tickLine={false} 
+                                        axisLine={false} 
+                                        fontSize={11}
+                                        tick={{ fill: '#64748b', fontWeight: 600 }}
+                                        dy={10}
+                                    />
+                                    <YAxis 
+                                        tickLine={false} 
+                                        axisLine={false} 
+                                        fontSize={11}
+                                        tick={{ fill: '#94a3b8' }}
+                                    />
+                                    <Tooltip 
+                                        cursor={{ fill: '#f8fafc' }}
+                                        contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1)' }}
+                                        labelStyle={{ color: '#0f172a', fontWeight: 'bold', marginBottom: '4px' }}
+                                        formatter={(value: any) => [<span key="value" className="font-bold text-blue-600">{value}</span>, 'Afiliados']}
+                                        labelFormatter={(label, payload) => payload?.[0]?.payload?.fullName || label}
+                                    />
+                                    <Bar dataKey="count" radius={[6, 6, 0, 0]} maxBarSize={50}>
+                                        {chartData.map((entry, index) => (
+                                            <Cell key={`cell-${index}`} fill={index === 0 ? '#3b82f6' : '#93c5fd'} />
+                                        ))}
+                                    </Bar>
+                                </BarChart>
+                            </ResponsiveContainer>
+                        ) : (
+                            <div className="flex h-full w-full items-center justify-center text-sm font-medium text-slate-400">
+                                Sin datos suficientes para mostrar el gráfico.
+                            </div>
+                        )}
                     </div>
                 </div>
             </div>

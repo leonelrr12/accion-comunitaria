@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import type { CreateUserInput, UpdateUserInput } from "@/types";
+import { logAction } from "./audit";
 
 interface GetUsersParams {
     page?: number;
@@ -130,6 +131,7 @@ export async function createUserAction(data: CreateUserInput) {
 
         revalidatePath("/admin/dashboard/usuarios");
         revalidatePath("/admin/dashboard");
+        await logAction(data.createdBy ? parseInt(String(data.createdBy), 10) : null, "CREATE_USER", `Creado líder/usuario ${newUser.email} con rol ${data.role}`);
         return { success: true, user: newUser, tempPassword: isTempPassword ? passwordToHash : undefined };
     } catch (error) {
         console.error("Error creating user:", error);
@@ -239,6 +241,7 @@ export async function updateUserAction(id: number, data: UpdateUserInput) {
         revalidatePath("/admin/dashboard/usuarios");
         revalidatePath("/admin/dashboard");
         revalidatePath("/admin/dashboard/jerarquia");
+        await logAction(null, "UPDATE_USER", `Actualizado usuario ID ${id} al rol ${data.role}`);
         return { success: true };
     } catch (error) {
         console.error("Error updating user:", error);
@@ -265,6 +268,7 @@ export async function deleteUserAction(id: number) {
 
         revalidatePath("/admin/dashboard/usuarios");
         revalidatePath("/admin/dashboard");
+        await logAction(null, "DELETE_USER", `Eliminado usuario ID ${id}`);
         return { success: true };
     } catch (error) {
         console.error("Error deleting user:", error);
