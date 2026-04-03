@@ -41,9 +41,9 @@ export default function CambiarPassword() {
                 
                 // Redirect user based on their role after updating password
                 if (currentUser?.role === "ADMIN") {
-                    router.push("/admin/dashboard");
+                    window.location.href = "/admin/dashboard";
                 } else {
-                    router.push("/dashboard");
+                    window.location.href = "/dashboard";
                 }
             } else {
                 setError(result.error || "Hubo un error al cambiar la contraseña.");
