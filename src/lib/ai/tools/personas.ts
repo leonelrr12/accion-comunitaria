@@ -39,7 +39,7 @@ export const crearPersona: Tool = {
     telefono: z.string().optional().describe('Número de teléfono'),
     email: z.string().optional().describe('Correo electrónico'),
     community_id: z.number().optional().describe('ID de la comunidad'),
-    leader_user_id: z.number().optional().describe('ID del líder asignado'),
+    leader_user_id: z.number().describe('ID del líder asignado obligatoriamente'),
   }),
   execute: async (args) => {
     // Verificar si la cédula ya existe
@@ -58,7 +58,7 @@ export const crearPersona: Tool = {
         phone: args.telefono as string | undefined,
         email: args.email as string | undefined,
         communityId: args.community_id as number | undefined,
-        leaderUserId: args.leader_user_id as number | undefined,
+        leaderUserId: args.leader_user_id as number,
       },
     })
     return { success: true, id: persona.id }
