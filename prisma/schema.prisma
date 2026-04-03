@@ -94,6 +94,7 @@ model User {
   province        Province?       @relation(fields: [provinceId], references: [id])
   role            Role            @relation(fields: [roleId], references: [id])
   auditLogs       AuditLog[]
+  notifications   Notification[]
 
   @@map("users")
 }
@@ -143,4 +144,17 @@ model AuditLog {
   user      User?    @relation(fields: [userId], references: [id])
 
   @@map("audit_logs")
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  userId    Int
+  title     String
+  message   String
+  isRead    Boolean  @default(false)
+  link      String?  // Optional link to redirect on click
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("notifications")
 }

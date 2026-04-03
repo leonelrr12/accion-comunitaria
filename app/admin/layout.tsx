@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Users, Shield, LogOut, ShieldCheck, BarChart3, MapPin, Network, Menu, X, Sparkles, Activity } from "lucide-react";
 import { logoutAction } from "../actions/auth";
+import NotificationBell from "../../components/ui/NotificationBell";
 
 logoutAction
 interface NavItem {
@@ -133,12 +134,15 @@ export default function AdminLayout({
                     <ShieldCheck className="text-blue-500 mr-2 h-6 w-6" />
                     <span className="font-bold tracking-tight">Admin</span>
                 </div>
-                <button
-                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors border border-slate-700 active:scale-95"
-                >
-                    {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
-                </button>
+                <div className="flex items-center gap-2">
+                    <NotificationBell />
+                    <button
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        className="p-2 rounded-xl bg-slate-800 hover:bg-slate-700 transition-colors border border-slate-700 active:scale-95"
+                    >
+                        {isMobileMenuOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                    </button>
+                </div>
             </header>
 
             {/* Mobile Menu Overlay */}
@@ -158,6 +162,9 @@ export default function AdminLayout({
 
             {/* Main content */}
             <main className="flex-1 flex flex-col h-screen overflow-hidden">
+                <div className="hidden md:flex h-16 border-b border-slate-200 bg-white items-center justify-end px-8 z-40">
+                    <NotificationBell />
+                </div>
                 <div className="flex-1 overflow-y-auto mt-16 md:mt-0 pb-20 md:pb-0">
                     <div className="p-4 md:p-8 lg:p-12 max-w-7xl mx-auto w-full">
                         {children}

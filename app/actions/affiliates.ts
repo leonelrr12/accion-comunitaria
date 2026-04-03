@@ -4,6 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import type { AffiliateInput } from "@/types";
 import { logAction } from "./audit";
+import { createSystemNotification } from "./notifications";
 
 interface GetAffiliatesParams {
     leaderUserId?: number;
@@ -71,6 +72,10 @@ export async function getAllAffiliates(leaderUserId?: number) {
 }
 
 export async function createAffiliate(data: AffiliateInput) {
+    if (!data.leaderUserId) {
+        return { success: false, error: "El campo Sponsor/Líder es estrictamente obligatorio." };
+    }
+    
     try {
         const newPerson = await prisma.person.create({
             data: {
@@ -79,7 +84,7 @@ export async function createAffiliate(data: AffiliateInput) {
                 cedula: data.cedula,
                 email: data.email,
                 phone: data.phone,
-                leaderUserId: data.leaderUserId ? Number(data.leaderUserId) : null,
+                leaderUserId: Number(data.leaderUserId),
                 provinceId: data.provinceId ? Number(data.provinceId) : null,
                 districtId: data.districtId ? Number(data.districtId) : null,
                 corregimientoId: data.corregimientoId ? Number(data.corregimientoId) : null,
@@ -91,6 +96,16 @@ export async function createAffiliate(data: AffiliateInput) {
         revalidatePath("/dashboard");
         revalidatePath("/admin/dashboard");
         await logAction(data.leaderUserId ? Number(data.leaderUserId) : null, "CREATE_AFFILIATE", `Afiliado registrado: ${data.cedula} (${data.name})`);
+        
+        if (data.leaderUserId) {
+            await createSystemNotification(
+                Number(data.leaderUserId),
+                "🎉 Nuevo Afiliado Registrado",
+                `Has registrado exitosamente a ${newPerson.name} ${newPerson.lastName} (Cédula: ${newPerson.cedula}). ¡Excelente trabajo!`,
+                `/dashboard/afiliados/${newPerson.id}`
+            );
+        }
+
         return { success: true, person: newPerson };
     } catch (error) {
         console.error("Error creating affiliate:", error);

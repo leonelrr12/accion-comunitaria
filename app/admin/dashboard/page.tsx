@@ -2,9 +2,12 @@
 
 import { useState, useEffect, useMemo } from "react";
 import { useAppStore } from "@/lib/store";
-import { UserPlus, Shield, BarChart3, Loader2, Users, Map } from "lucide-react";
+import { UserPlus, Shield, BarChart3, Loader2, Users, Map, Download } from "lucide-react";
 import Link from "next/link";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, CartesianGrid, Cell } from "recharts";
+import MapWrapper from "../../../components/ui/MapWrapper";
+import { exportToCSV } from "@/lib/export";
+import { toast } from "sonner";
 import { getAllUsers } from "../../actions/users";
 import { getAllAffiliates } from "../..//actions/affiliates";
 
@@ -23,6 +26,7 @@ export default function AdminDashboard() {
     const [lideres, setLideres] = useState<any[]>([]);
     const [allAfiliadosList, setAllAfiliadosList] = useState<any[]>([]);
     const [loading, setLoading] = useState(true);
+    const [isExporting, setIsExporting] = useState(false);
 
     useEffect(() => {
         const fetchDashboardData = async () => {
@@ -73,11 +77,62 @@ export default function AdminDashboard() {
             .sort((a, b) => b.count - a.count);
     }, [allAfiliadosList]);
 
+    const handleExportGlobalAfiliados = () => {
+        if (!allAfiliadosList.length) {
+            toast.error("No hay afiliados registrados para exportar.");
+            return;
+        }
+        setIsExporting(true);
+        try {
+            const headers = [
+                { label: "Nombre", key: "name" },
+                { label: "Apellido", key: "lastName" },
+                { label: "Cédula", key: "cedula" },
+                { label: "Email", key: "email" },
+                { label: "Teléfono", key: "phone" },
+                { label: "Provincia", key: "province.name" },
+                { label: "Distrito", key: "district.name" },
+                { label: "Corregimiento", key: "corregimiento.name" },
+                { label: "Comunidad", key: "community.name" },
+                { label: "Fecha Registro", key: "createdAt" },
+                { label: "ID Creador", key: "leaderUserId" }
+            ];
+            exportToCSV(allAfiliadosList, "base_datos_global_afiliados", headers);
+            toast.success("Base de datos de afiliados exportada exitosamente.");
+        } catch (err) {
+            toast.error("Hubo un error al exportar CSV.");
+        } finally {
+            setIsExporting(false);
+        }
+    };
+
     if (loading) {
         return (
-            <div className="flex flex-col items-center justify-center h-96 space-y-4">
-                <Loader2 className="h-10 w-10 text-slate-400 animate-spin" />
-                <p className="text-slate-500 font-medium tracking-tight">Cargando métricas en tiempo real...</p>
+            <div className="space-y-6 max-w-7xl mx-auto w-full p-4 mt-8">
+                {/* Header Skeleton */}
+                <div className="flex justify-between items-center mb-8">
+                    <div className="h-10 w-1/3 bg-slate-200 rounded-xl animate-pulse"></div>
+                    <div className="h-10 w-32 bg-slate-200 rounded-xl animate-pulse"></div>
+                </div>
+                
+                {/* Stats Skeletons */}
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 md:gap-6">
+                    {[1, 2, 3].map(i => (
+                        <div key={i} className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 flex items-center h-28 animate-pulse">
+                            <div className="h-12 w-12 bg-slate-200 rounded-xl mr-4"></div>
+                            <div className="flex-1">
+                                <div className="h-4 bg-slate-200 rounded w-24 mb-2"></div>
+                                <div className="h-8 bg-slate-200 rounded w-16"></div>
+                            </div>
+                        </div>
+                    ))}
+                </div>
+
+                {/* Content Skeletons */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+                    <div className="bg-white p-6 rounded-2xl h-80 shadow-sm border border-gray-100 animate-pulse"></div>
+                    <div className="bg-white p-6 rounded-2xl h-80 shadow-sm border border-gray-100 animate-pulse"></div>
+                </div>
             </div>
         );
     }
@@ -96,10 +151,18 @@ export default function AdminDashboard() {
                         Consola de administración conectada a la base de datos PostgreSQL.
                     </p>
                 </div>
-                <div className="mt-4 flex md:mt-0 md:ml-4">
+                <div className="mt-4 flex gap-3 md:mt-0 md:ml-4">
+                    <button 
+                        onClick={handleExportGlobalAfiliados}
+                        disabled={isExporting || allAfiliadosList.length === 0}
+                        className="inline-flex items-center px-4 py-2 border border-slate-200 rounded-xl shadow-sm text-sm font-bold text-slate-700 bg-white hover:bg-slate-50 focus:outline-none transition-colors disabled:opacity-50"
+                    >
+                        {isExporting ? <Loader2 className="-ml-1 mr-2 h-4 w-4 animate-spin" /> : <Download className="-ml-1 mr-2 h-4 w-4 text-emerald-500" />}
+                        Exportar BD
+                    </button>
                     <Link
                         href="/admin/dashboard/usuarios"
-                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-slate-900 hover:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-slate-900 transition-colors"
+                        className="inline-flex items-center px-4 py-2 border border-transparent rounded-xl shadow-sm text-sm font-bold text-white bg-slate-900 hover:bg-slate-800 transition-colors"
                     >
                         <UserPlus className="-ml-1 mr-2 h-5 w-5" aria-hidden="true" />
                         Gestionar Miembros
@@ -224,6 +287,27 @@ export default function AdminDashboard() {
                         )}
                     </div>
                 </div>
+            </div>
+
+            {/* SECCIÓN: MAPA GEOGRÁFICO INTERACTIVO */}
+            <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 mt-6 relative z-0">
+                <div className="flex items-center justify-between mb-6">
+                    <div>
+                        <h3 className="text-xl font-black text-slate-900 flex items-center gap-2">
+                            <Map className="h-6 w-6 text-emerald-500" />
+                            Mapa Geográfico de Cobertura (San Miguelito)
+                        </h3>
+                        <p className="mt-1 text-sm text-slate-500 font-medium">Visualización de afiliados posicionados en los corregimientos clave.</p>
+                    </div>
+                </div>
+                
+                {allAfiliadosList.length > 0 ? (
+                    <MapWrapper affiliates={allAfiliadosList} />
+                ) : (
+                    <div className="h-[400px] w-full rounded-3xl bg-slate-50 flex items-center justify-center border-2 border-dashed border-slate-200">
+                        <p className="text-slate-400 font-bold text-sm">Esperando registros para desplegar el mapa territorial...</p>
+                    </div>
+                )}
             </div>
 
             {/* TABLA DE LÍDERES */}
