@@ -3,7 +3,8 @@
 import { useState } from "react";
 import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
-import { User, Phone, Mail, Lock, Eye, EyeOff, Save, CheckCircle2, Shield } from "lucide-react";
+import { User, Phone, Mail, Lock, Eye, EyeOff, Save, CheckCircle2, Shield, MapPin } from "lucide-react";
+import { LocationSelector } from "../../../components/ui/LocationSelector";
 import { toast } from "sonner";
 
 export default function ConfiguracionPage() {
@@ -17,6 +18,12 @@ export default function ConfiguracionPage() {
     const [phone, setPhone] = useState(currentUser?.phone ?? "");
     const [savingProfile, setSavingProfile] = useState(false);
     const [profileSaved, setProfileSaved] = useState(false);
+
+    // Ubicación
+    const [provinceId, setProvinceId] = useState(currentUser?.provinceId?.toString() || "8");
+    const [districtId, setDistrictId] = useState(currentUser?.districtId?.toString() || "2");
+    const [corregimientoId, setCorregimientoId] = useState(currentUser?.corregimientoId?.toString() || "");
+    const [communityId, setCommunityId] = useState(currentUser?.communityId?.toString() || "");
 
     // Cambio de contraseña
     const [currentPassword, setCurrentPassword] = useState("");
@@ -36,10 +43,27 @@ export default function ConfiguracionPage() {
             const res = await fetch(`/api/users/${currentUser.id}`, {
                 method: "PATCH",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ name, lastName, phone }),
+                body: JSON.stringify({ 
+                    name, 
+                    lastName, 
+                    phone,
+                    provinceId: provinceId ? Number(provinceId) : null,
+                    districtId: districtId ? Number(districtId) : null,
+                    corregimientoId: corregimientoId ? Number(corregimientoId) : null,
+                    communityId: communityId ? Number(communityId) : null,
+                }),
             });
             if (res.ok) {
-                setCurrentUser({ ...currentUser, name, lastName, phone });
+                setCurrentUser({ 
+                    ...currentUser, 
+                    name, 
+                    lastName, 
+                    phone,
+                    provinceId: provinceId ? Number(provinceId) : null,
+                    districtId: districtId ? Number(districtId) : null,
+                    corregimientoId: corregimientoId ? Number(corregimientoId) : null,
+                    communityId: communityId ? Number(communityId) : null,
+                });
                 setProfileSaved(true);
                 toast.success("Perfil actualizado correctamente");
                 setTimeout(() => setProfileSaved(false), 3000);
@@ -169,6 +193,29 @@ export default function ConfiguracionPage() {
                             placeholder="Ej: 6000-0000"
                             className="w-full px-4 py-2.5 rounded-xl border border-gray-200 text-sm font-medium text-slate-800 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent bg-slate-50 transition"
                         />
+                    </div>
+
+                    <div className="pt-4 border-t border-slate-100">
+                        <div className="mb-4">
+                            <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                <MapPin className="h-4 w-4 text-blue-600" />
+                                Mi Territorio Asignado
+                            </h3>
+                            <p className="text-[10px] text-slate-500">Define tu zona de trabajo predeterminada.</p>
+                        </div>
+                        <div className="bg-slate-50 p-4 rounded-2xl border border-gray-100">
+                            <LocationSelector
+                                provinceId={provinceId}
+                                districtId={districtId}
+                                corregimientoId={corregimientoId}
+                                communityId={communityId}
+                                setProvinceId={setProvinceId}
+                                setDistrictId={setDistrictId}
+                                setCorregimientoId={setCorregimientoId}
+                                setCommunityId={setCommunityId}
+                                disabled={savingProfile}
+                            />
+                        </div>
                     </div>
 
                     <div className="flex justify-end">

@@ -2,8 +2,9 @@
 
 import { useState, useEffect, useTransition, useCallback } from "react";
 import { useAppStore } from "@/lib/store";
-import { UserPlus, Shield, ArrowRight, Loader2, Edit2, Trash2, X as CloseIcon } from "lucide-react";
+import { UserPlus, Shield, ArrowRight, Loader2, Edit2, Trash2, X as CloseIcon, MapPin } from "lucide-react";
 import Link from "next/link";
+import { LocationSelector } from "../../../../components/ui/LocationSelector";
 import { toast } from "sonner";
 import { getUsers, createUserAction, updateUserAction, deleteUserAction } from "../../../actions/users";
 import { getRoles } from "../../../actions/roles";
@@ -331,7 +332,11 @@ export default function GestionUsuarios() {
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center space-x-2">
                                             <button
-                                                onClick={() => setEditingUser(user)}
+                                                onClick={() => setEditingUser({ 
+                                                    ...user, 
+                                                    provinceId: user.provinceId || 8, 
+                                                    districtId: user.districtId || 2 
+                                                })}
                                                 className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                                 title="Editar Jerarquía"
                                             >
@@ -448,6 +453,29 @@ export default function GestionUsuarios() {
                                         </select>
                                     </div>
                                 )}
+                            </div>
+
+                            <div className="pt-4 border-t border-gray-100">
+                                <div className="mb-4">
+                                    <h3 className="text-sm font-bold text-slate-900 flex items-center gap-2">
+                                        <MapPin className="h-4 w-4 text-emerald-500" />
+                                        Ubicación Geográfica
+                                    </h3>
+                                    <p className="text-[10px] text-slate-500">Asigna el territorio de operación para este usuario.</p>
+                                </div>
+                                <div className="bg-slate-50 p-4 rounded-2xl border border-gray-100">
+                                    <LocationSelector
+                                        provinceId={editingUser.provinceId?.toString() || ""}
+                                        districtId={editingUser.districtId?.toString() || ""}
+                                        corregimientoId={editingUser.corregimientoId?.toString() || ""}
+                                        communityId={editingUser.communityId?.toString() || ""}
+                                        setProvinceId={(val) => setEditingUser(prev => prev ? ({ ...prev, provinceId: val ? Number(val) : null }) : null)}
+                                        setDistrictId={(val) => setEditingUser(prev => prev ? ({ ...prev, districtId: val ? Number(val) : null }) : null)}
+                                        setCorregimientoId={(val) => setEditingUser(prev => prev ? ({ ...prev, corregimientoId: val ? Number(val) : null }) : null)}
+                                        setCommunityId={(val) => setEditingUser(prev => prev ? ({ ...prev, communityId: val ? Number(val) : null }) : null)}
+                                        disabled={isPending}
+                                    />
+                                </div>
                             </div>
 
                             <button

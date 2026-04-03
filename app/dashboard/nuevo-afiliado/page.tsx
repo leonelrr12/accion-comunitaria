@@ -22,8 +22,8 @@ export default function NuevoAfiliado() {
         phone: "",
         email: "",
         address: "",
-        provinceId: currentUser?.provinceId?.toString() || "",
-        districtId: currentUser?.districtId?.toString() || "",
+        provinceId: currentUser?.provinceId?.toString() || "8",
+        districtId: currentUser?.districtId?.toString() || "2",
         corregimientoId: currentUser?.corregimientoId?.toString() || "",
         communityId: currentUser?.communityId?.toString() || "",
         leaderUserId: currentUser?.id?.toString() || "",
@@ -158,7 +158,18 @@ export default function NuevoAfiliado() {
                                     disabled={isPending}
                                     className="w-full bg-blue-50 border border-blue-200 text-slate-900 rounded-xl py-3 px-3 focus:ring-2 focus:ring-blue-500 outline-none font-semibold transition-all shadow-sm"
                                     value={formData.leaderUserId}
-                                    onChange={(e) => setFormData({ ...formData, leaderUserId: e.target.value })}
+                                    onChange={(e) => {
+                                        const leaderId = e.target.value;
+                                        const leader = availableLeaders.find(l => l.id.toString() === leaderId);
+                                        setFormData(prev => ({ 
+                                            ...prev, 
+                                            leaderUserId: leaderId,
+                                            provinceId: leader?.provinceId?.toString() || prev.provinceId,
+                                            districtId: leader?.districtId?.toString() || prev.districtId,
+                                            corregimientoId: leader?.corregimientoId?.toString() || prev.corregimientoId,
+                                            communityId: leader?.communityId?.toString() || prev.communityId,
+                                        }));
+                                    }}
                                 >
                                     <option value="" disabled>Selecciona al Sponsor Obligatorio</option>
                                     {availableLeaders.map(lider => (

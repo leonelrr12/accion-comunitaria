@@ -196,7 +196,11 @@ export async function updateUserAction(id: number, data: UpdateUserInput) {
                 lastName: data.lastName,
                 email: data.email,
                 phone: data.phone,
-                roleId: role.id
+                roleId: role.id,
+                provinceId: data.provinceId ? parseInt(String(data.provinceId)) : null,
+                districtId: data.districtId ? parseInt(String(data.districtId)) : null,
+                corregimientoId: data.corregimientoId ? parseInt(String(data.corregimientoId)) : null,
+                communityId: data.communityId ? parseInt(String(data.communityId)) : null,
             }
         });
 

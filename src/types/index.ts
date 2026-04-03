@@ -72,6 +72,10 @@ export interface UpdateUserInput {
     phone?: string | null;
     role: string;
     parentLeaderId?: string | null;
+    provinceId?: number | string | null;
+    districtId?: number | string | null;
+    corregimientoId?: number | string | null;
+    communityId?: number | string | null;
 }
 
 export interface AffiliateInput {
