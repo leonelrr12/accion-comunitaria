@@ -35,15 +35,15 @@ export default function CambiarPassword() {
             
             if (result.success) {
                 // Update local Zustand state
-                if (currentUser) {
-                    setCurrentUser({ ...currentUser, mustChangePassword: false });
-                }
-                
-                // Redirect user based on their role after updating password
-                if (currentUser?.role === "ADMIN") {
-                    window.location.href = "/admin/dashboard";
-                } else {
-                    window.location.href = "/dashboard";
+                if (result.user) {
+                    setCurrentUser(result.user);
+                    
+                    // Redirect user based on their role after updating password
+                    if (result.user.role === "ADMIN") {
+                        window.location.assign("/admin/dashboard");
+                    } else {
+                        window.location.assign("/dashboard");
+                    }
                 }
             } else {
                 setError(result.error || "Hubo un error al cambiar la contraseña.");

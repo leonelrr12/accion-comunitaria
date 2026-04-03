@@ -44,10 +44,42 @@ export default function Dashboard() {
     if (!currentUser) return null;
 
     const copyToClipboard = () => {
-        if (typeof navigator !== "undefined") {
-            navigator.clipboard.writeText(inviteUrl);
-            setCopied(true);
-            setTimeout(() => setCopied(false), 2000);
+        if (!inviteUrl) return;
+
+        // Modern API (Requires HTTPS)
+        if (typeof navigator !== "undefined" && navigator.clipboard) {
+            navigator.clipboard.writeText(inviteUrl).then(() => {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+            }).catch(err => {
+                console.error("Error with clipboard API:", err);
+                fallbackCopy(inviteUrl);
+            });
+        } else {
+            // Fallback for non-HTTPS or older browsers
+            fallbackCopy(inviteUrl);
+        }
+    };
+
+    const fallbackCopy = (text: string) => {
+        try {
+            const textArea = document.createElement("textarea");
+            textArea.value = text;
+            // Prevent scrolling to bottom
+            textArea.style.top = "0";
+            textArea.style.left = "0";
+            textArea.style.position = "fixed";
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+            const successful = document.execCommand('copy');
+            document.body.removeChild(textArea);
+            if (successful) {
+                setCopied(true);
+                setTimeout(() => setCopied(false), 2000);
+            }
+        } catch (err) {
+            console.error("Fallback copy failed:", err);
         }
     };
 
