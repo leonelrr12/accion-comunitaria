@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 // PATCH /api/users/[id] — update profile (name, lastName, phone)
 export async function PATCH(
@@ -9,6 +10,12 @@ export async function PATCH(
     const { id } = await params;
     const userId = parseInt(id, 10);
     if (isNaN(userId)) return NextResponse.json({ message: "ID inválido" }, { status: 400 });
+
+    const clientIp = getClientIp(req.headers) || "unknown";
+    const rateLimit = checkRateLimit(`profile_update:${clientIp}`, 60, 60 * 1000); // Max 60 requests per minute
+    if (!rateLimit.allowed) {
+        return NextResponse.json({ message: "Has excedido el límite de solicitudes. Intenta de nuevo más tarde." }, { status: 429 });
+    }
 
     const body = await req.json().catch(() => ({}));
     const { name, lastName, phone } = body;

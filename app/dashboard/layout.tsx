@@ -6,6 +6,7 @@ import { useEffect, useState } from "react";
 import Link from "next/link";
 import { Users, LayoutDashboard, LogOut, Settings, Menu, X, ChevronRight } from "lucide-react";
 import { logoutAction } from "../actions/auth";
+import NotificationBell from "../../components/ui/NotificationBell";
 
 interface NavItem {
     name: string;
@@ -137,12 +138,15 @@ export default function DashboardLayout({
                     </div>
                     <span className="font-bold tracking-tight text-slate-800">Comunidad</span>
                 </div>
-                <button
-                    onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
-                    className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors border border-gray-100"
-                >
-                    {isMobileMenuOpen ? <X className="h-6 w-6 text-slate-600" /> : <Menu className="h-6 w-6 text-slate-600" />}
-                </button>
+                <div className="flex items-center gap-2">
+                    <NotificationBell />
+                    <button
+                        onClick={() => setIsMobileMenuOpen(!isMobileMenuOpen)}
+                        className="p-2 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors border border-gray-100"
+                    >
+                        {isMobileMenuOpen ? <X className="h-6 w-6 text-slate-600" /> : <Menu className="h-6 w-6 text-slate-600" />}
+                    </button>
+                </div>
             </header>
 
             {/* Mobile Menu Overlay */}
@@ -172,6 +176,9 @@ export default function DashboardLayout({
 
             {/* Main content */}
             <main className="flex-1 flex flex-col h-screen overflow-hidden">
+                <div className="hidden md:flex h-16 border-b border-gray-100 bg-white items-center justify-end px-8 z-40">
+                    <NotificationBell />
+                </div>
                 <div className="flex-1 overflow-y-auto mt-16 md:mt-0 pb-20 md:pb-8">
                     <div className="p-4 md:p-8 max-w-6xl mx-auto w-full">
                         {children}

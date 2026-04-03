@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useTransition } from "react";
+import { useState, useTransition, useEffect } from "react";
 import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { LocationSelector } from "../../../components/ui/LocationSelector";
 import { createAffiliate } from "../../actions/affiliates";
+import { getAllUsers } from "../../actions/users";
 import { Loader2, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
@@ -25,7 +26,16 @@ export default function NuevoAfiliado() {
         districtId: currentUser?.districtId?.toString() || "",
         corregimientoId: currentUser?.corregimientoId?.toString() || "",
         communityId: currentUser?.communityId?.toString() || "",
+        leaderUserId: currentUser?.id?.toString() || "",
     });
+
+    const [availableLeaders, setAvailableLeaders] = useState<any[]>([]);
+
+    useEffect(() => {
+        getAllUsers().then(users => {
+            setAvailableLeaders(users.filter((u: any) => u.role.name !== "ADMIN"));
+        });
+    }, []);
 
     if (!currentUser) return null;
 
@@ -37,10 +47,15 @@ export default function NuevoAfiliado() {
             return;
         }
 
+        if (!formData.leaderUserId) {
+            toast.warning("El Sponsor o Líder responsable es obligatorio.");
+            return;
+        }
+
         startTransition(async () => {
             const result = await createAffiliate({
                 ...formData,
-                leaderUserId: currentUser.id
+                leaderUserId: formData.leaderUserId
             });
 
             if (result.success) {
@@ -134,6 +149,24 @@ export default function NuevoAfiliado() {
                                     value={formData.email}
                                     onChange={(e) => setFormData({ ...formData, email: e.target.value })}
                                 />
+                            </div>
+
+                            <div className="sm:col-span-6 pt-4 border-t border-slate-100">
+                                <label className="block text-sm font-black text-blue-700 mb-1.5">Sponsor / Líder a cargo <span className="text-red-500">*</span></label>
+                                <select
+                                    required
+                                    disabled={isPending}
+                                    className="w-full bg-blue-50 border border-blue-200 text-slate-900 rounded-xl py-3 px-3 focus:ring-2 focus:ring-blue-500 outline-none font-semibold transition-all shadow-sm"
+                                    value={formData.leaderUserId}
+                                    onChange={(e) => setFormData({ ...formData, leaderUserId: e.target.value })}
+                                >
+                                    <option value="" disabled>Selecciona al Sponsor Obligatorio</option>
+                                    {availableLeaders.map(lider => (
+                                        <option key={lider.id} value={lider.id}>
+                                            {lider.name} {lider.lastName} ({lider.role.name})
+                                        </option>
+                                    ))}
+                                </select>
                             </div>
                         </div>
                     </div>

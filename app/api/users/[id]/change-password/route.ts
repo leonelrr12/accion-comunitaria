@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import prisma from "@/lib/prisma";
 import bcrypt from "bcryptjs";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 
 // POST /api/users/[id]/change-password
 export async function POST(
@@ -10,6 +11,12 @@ export async function POST(
     const { id } = await params;
     const userId = parseInt(id, 10);
     if (isNaN(userId)) return NextResponse.json({ message: "ID inválido" }, { status: 400 });
+
+    const clientIp = getClientIp(req.headers) || "unknown";
+    const rateLimit = checkRateLimit(`pwd_change:${clientIp}`, 10, 60 * 60 * 1000); // 10 attempts per hour
+    if (!rateLimit.allowed) {
+        return NextResponse.json({ message: "Demasiados intentos. Bloqueado temporalmente." }, { status: 429 });
+    }
 
     const body = await req.json().catch(() => ({}));
     const { currentPassword, newPassword } = body;

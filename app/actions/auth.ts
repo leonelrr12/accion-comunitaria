@@ -2,8 +2,8 @@
 
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
-import { cookies } from "next/headers";
-import { checkRateLimit } from "@/lib/rateLimit";
+import { cookies, headers } from "next/headers";
+import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { loginSchema } from "@/lib/validation";
 import { encrypt } from "@/lib/auth-utils";
 
@@ -36,8 +36,9 @@ export async function loginAction(
 
     const { email: validEmail, password: validPassword } = validation.data;
 
-    // Check rate limit (5 attempts per 15 minutes)
-    const clientIp = "default";
+    // Check rate limit (5 attempts per 15 minutes) per IP
+    const reqHeaders = await headers();
+    const clientIp = getClientIp(reqHeaders) || "unknown";
     const rateLimit = checkRateLimit(`login:${clientIp}`, 5, 15 * 60 * 1000);
 
     if (!rateLimit.allowed) {

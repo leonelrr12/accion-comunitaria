@@ -2,7 +2,7 @@
 
 import { useAppStore } from "@/lib/store";
 import { useState, useEffect, useCallback } from "react";
-import { UserPlus, Loader2, Eye } from "lucide-react";
+import { UserPlus, Loader2, Eye, Download } from "lucide-react";
 import Link from "next/link";
 import { getAffiliates, getAllAffiliates } from "../../actions/affiliates";
 import { mapPersonFromDB } from "@/lib/mappers";
@@ -129,9 +129,30 @@ export default function Afiliados() {
             {/* Table */}
             <div className="bg-white shadow-sm border border-gray-100 rounded-2xl overflow-hidden">
                 {loading ? (
-                    <div className="flex flex-col items-center justify-center h-48 space-y-3">
-                        <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
-                        <p className="text-sm text-slate-400 font-medium">Buscando afiliados...</p>
+                    <div className="overflow-x-auto w-full p-4">
+                        <div className="animate-pulse flex flex-col space-y-4">
+                            {/* Table Header Skeleton */}
+                            <div className="flex border-b border-gray-100 pb-4 mb-2">
+                                <div className="h-4 bg-slate-200 rounded w-1/4 mr-4"></div>
+                                <div className="h-4 bg-slate-200 rounded w-1/4 mr-4"></div>
+                                <div className="h-4 bg-slate-200 rounded w-1/4 mr-4"></div>
+                                <div className="h-4 bg-slate-200 rounded w-1/4"></div>
+                            </div>
+                            
+                            {/* Table Rows Skeletons */}
+                            {[1, 2, 3, 4, 5].map((i) => (
+                                <div key={i} className="flex items-center space-x-4 py-3">
+                                    <div className="h-10 w-10 bg-slate-200 rounded-full flex-shrink-0"></div>
+                                    <div className="flex-1 space-y-2">
+                                        <div className="h-4 bg-slate-200 rounded w-3/4"></div>
+                                        <div className="h-3 bg-slate-100 rounded w-1/2"></div>
+                                    </div>
+                                    <div className="h-4 bg-slate-200 rounded w-1/5"></div>
+                                    <div className="h-4 bg-slate-200 rounded w-1/5"></div>
+                                    <div className="h-8 bg-slate-100 rounded-lg w-20"></div>
+                                </div>
+                            ))}
+                        </div>
                     </div>
                 ) : (
                     <>
