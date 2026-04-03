@@ -114,7 +114,7 @@ model UserHierarchy {
 
 model Person {
   id              Int            @id @default(autoincrement())
-  leaderUserId    Int?
+  leaderUserId    Int
   name            String
   lastName        String
   cedula          String         @unique
@@ -128,7 +128,7 @@ model Person {
   community       Community?     @relation(fields: [communityId], references: [id])
   corregimiento   Corregimiento? @relation(fields: [corregimientoId], references: [id])
   district        District?      @relation(fields: [districtId], references: [id])
-  leader          User?          @relation(fields: [leaderUserId], references: [id])
+  leader          User           @relation(fields: [leaderUserId], references: [id])
   province        Province?      @relation(fields: [provinceId], references: [id])
 
   @@map("persons")
