@@ -7,7 +7,7 @@ import {
     getCorregimientos,
     getCommunities
 } from "../../app/actions/geography";
-import { Loader2 } from "lucide-react";
+import { Loader2, ChevronDown } from "lucide-react";
 
 interface LocationSelectorProps {
     provinceId: string;
@@ -77,9 +77,8 @@ export function LocationSelector({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // only on mount
 
-    // Fetch Districts when Province changes (skip on first mount)
+    // Fetch Districts when Province changes
     useEffect(() => {
-        if (!isMounted.current) return;
         if (provinceId) {
             getDistricts(parseInt(provinceId)).then(setDistricts);
         } else {
@@ -89,9 +88,8 @@ export function LocationSelector({
         }
     }, [provinceId]);
 
-    // Fetch Corregimientos when District changes (skip on first mount)
+    // Fetch Corregimientos when District changes
     useEffect(() => {
-        if (!isMounted.current) return;
         if (districtId) {
             getCorregimientos(parseInt(districtId)).then(setCorregimientos);
         } else {
@@ -100,20 +98,14 @@ export function LocationSelector({
         }
     }, [districtId]);
 
-    // Fetch Communities when Corregimiento changes (skip on first mount)
+    // Fetch Communities when Corregimiento changes
     useEffect(() => {
-        if (!isMounted.current) return;
         if (corregimientoId) {
             getCommunities(parseInt(corregimientoId)).then(setCommunities);
         } else {
             setCommunities([]);
         }
     }, [corregimientoId]);
-
-    // Mark as mounted after all init effects have run
-    useEffect(() => {
-        isMounted.current = true;
-    }, []);
 
     return (
         <div className="space-y-6">
@@ -135,15 +127,18 @@ export function LocationSelector({
                                 setCorregimientoId("");
                                 setCommunityId("");
                             }}
-                            className="appearance-none block w-full bg-white border border-gray-200 text-gray-900 rounded-xl py-3 px-4 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm disabled:bg-gray-50 disabled:text-gray-400 hover:border-blue-400 group-disabled:hover:border-gray-200"
+                            className="block w-full bg-white border border-gray-200 text-gray-900 rounded-xl py-3 px-4 pr-10 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm disabled:bg-gray-50 disabled:text-gray-400 hover:border-blue-400 group-disabled:hover:border-gray-200 appearance-none pointer-events-auto"
                         >
                             <option value="">Seleccione una provincia...</option>
                             {provinces.map((p) => (
-                                <option key={p.id} value={p.id}>
+                                <option key={p.id} value={p.id.toString()}>
                                     {p.name}
                                 </option>
                             ))}
                         </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                            {loading ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronDown className="h-4 w-4" />}
+                        </div>
                     </div>
                 </div>
 
@@ -163,15 +158,18 @@ export function LocationSelector({
                                 setCorregimientoId("");
                                 setCommunityId("");
                             }}
-                            className="appearance-none block w-full bg-white border border-gray-200 text-gray-900 rounded-xl py-3 px-4 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm disabled:bg-gray-50 disabled:text-gray-400 hover:border-blue-400 group-disabled:hover:border-gray-200"
+                            className="block w-full bg-white border border-gray-200 text-gray-900 rounded-xl py-3 px-4 pr-10 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm disabled:bg-gray-50 disabled:text-gray-400 hover:border-blue-400 group-disabled:hover:border-gray-200 appearance-none"
                         >
                             <option value="">Seleccione un distrito...</option>
                             {districts.map((d) => (
-                                <option key={d.id} value={d.id}>
+                                <option key={d.id} value={d.id.toString()}>
                                     {d.name}
                                 </option>
                             ))}
                         </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                            <ChevronDown className="h-4 w-4" />
+                        </div>
                     </div>
                 </div>
 
@@ -190,15 +188,18 @@ export function LocationSelector({
                                 setCorregimientoId(e.target.value);
                                 setCommunityId("");
                             }}
-                            className="appearance-none block w-full bg-white border border-gray-200 text-gray-900 rounded-xl py-3 px-4 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm disabled:bg-gray-50 disabled:text-gray-400 hover:border-blue-400 group-disabled:hover:border-gray-200"
+                            className="block w-full bg-white border border-gray-200 text-gray-900 rounded-xl py-3 px-4 pr-10 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm disabled:bg-gray-50 disabled:text-gray-400 hover:border-blue-400 group-disabled:hover:border-gray-200 appearance-none"
                         >
                             <option value="">Seleccione corregimiento...</option>
                             {corregimientos.map((c) => (
-                                <option key={c.id} value={c.id}>
+                                <option key={c.id} value={c.id.toString()}>
                                     {c.name}
                                 </option>
                             ))}
                         </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                            <ChevronDown className="h-4 w-4" />
+                        </div>
                     </div>
                 </div>
 
@@ -214,15 +215,18 @@ export function LocationSelector({
                             disabled={disabled || !corregimientoId}
                             required
                             onChange={(e) => setCommunityId(e.target.value)}
-                            className="appearance-none block w-full bg-white border border-gray-200 text-gray-900 rounded-xl py-3 px-4 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm disabled:bg-gray-50 disabled:text-gray-400 hover:border-blue-400 group-disabled:hover:border-gray-200"
+                            className="block w-full bg-white border border-gray-200 text-gray-900 rounded-xl py-3 px-4 pr-10 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm disabled:bg-gray-50 disabled:text-gray-400 hover:border-blue-400 group-disabled:hover:border-gray-200 appearance-none"
                         >
                             <option value="">Seleccione comunidad...</option>
                             {communities.map((com) => (
-                                <option key={com.id} value={com.id}>
+                                <option key={com.id} value={com.id.toString()}>
                                     {com.name}
                                 </option>
                             ))}
                         </select>
+                        <div className="pointer-events-none absolute inset-y-0 right-0 flex items-center px-3 text-gray-500">
+                            <ChevronDown className="h-4 w-4" />
+                        </div>
                     </div>
                 </div>
             </div>

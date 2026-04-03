@@ -18,7 +18,7 @@ export async function PATCH(
     }
 
     const body = await req.json().catch(() => ({}));
-    const { name, lastName, phone } = body;
+    const { name, lastName, phone, provinceId, districtId, corregimientoId, communityId } = body;
 
     if (!name || !lastName) {
         return NextResponse.json({ message: "Nombre y apellido son requeridos" }, { status: 400 });
@@ -31,8 +31,22 @@ export async function PATCH(
                 name: String(name).trim(),
                 lastName: String(lastName).trim(),
                 phone: phone ? String(phone).trim() : null,
+                provinceId: provinceId ? Number(provinceId) : null,
+                districtId: districtId ? Number(districtId) : null,
+                corregimientoId: corregimientoId ? Number(corregimientoId) : null,
+                communityId: communityId ? Number(communityId) : null,
             },
-            select: { id: true, name: true, lastName: true, phone: true, email: true },
+            select: { 
+                id: true, 
+                name: true, 
+                lastName: true, 
+                phone: true, 
+                email: true,
+                provinceId: true,
+                districtId: true,
+                corregimientoId: true,
+                communityId: true
+            },
         });
         return NextResponse.json(updated);
     } catch (err) {
