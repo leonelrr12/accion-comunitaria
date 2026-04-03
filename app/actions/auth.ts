@@ -172,7 +172,7 @@ export async function changePasswordAction(password: string) {
             path: "/",
         });
 
-        return { success: true };
+        return { success: true, user: newSessionPayload };
     } catch (e: unknown) {
         return { success: false, error: "Error cambiando contraseña" };
     }
