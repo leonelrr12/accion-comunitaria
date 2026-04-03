@@ -167,7 +167,9 @@ export async function changePasswordAction(password: string) {
         const encryptedSession = await import("@/lib/auth-utils").then(m => m.encrypt(newSessionPayload));
         cookieStore.set("session", encryptedSession, {
             httpOnly: true,
-            secure: process.env.NODE_ENV === "production",
+            // ********************************************************
+            secure: false, //process.env.NODE_ENV === "production",
+            // ********************************************************
             sameSite: "lax",
             maxAge: 60 * 60 * 24 * 7, // 7 days
             path: "/",
