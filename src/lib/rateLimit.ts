@@ -71,18 +71,9 @@ export function checkRateLimit(
  * Get client IP from request headers
  */
 export function getClientIp(headers: Headers): string {
-    // Check forwarded header (for proxied requests)
-    const forwarded = headers.get("x-forwarded-for");
-    if (forwarded) {
-        return forwarded.split(",")[0].trim();
-    }
-
-    // Check real IP header
-    const realIp = headers.get("x-real-ip");
-    if (realIp) {
-        return realIp;
-    }
-
-    // Fallback to unknown
-    return "unknown";
+    return headers.get("cf-connecting-ip") || 
+           headers.get("x-forwarded-for")?.split(",")[0].trim() || 
+           headers.get("x-real-ip") || 
+           headers.get("x-appengine-remote-addr") || 
+           "unknown";
 }

@@ -11,8 +11,8 @@ export async function PATCH(
     const userId = parseInt(id, 10);
     if (isNaN(userId)) return NextResponse.json({ message: "ID inválido" }, { status: 400 });
 
-    const clientIp = getClientIp(req.headers) || "unknown";
-    const rateLimit = checkRateLimit(`profile_update:${clientIp}`, 60, 60 * 1000); // Max 60 requests per minute
+    const clientIp = getClientIp(req.headers);
+    const rateLimit = checkRateLimit(`profile_update:${userId}:${clientIp}`, 60, 60 * 1000); // 60 requests per minute per user/ip combinations
     if (!rateLimit.allowed) {
         return NextResponse.json({ message: "Has excedido el límite de solicitudes. Intenta de nuevo más tarde." }, { status: 429 });
     }

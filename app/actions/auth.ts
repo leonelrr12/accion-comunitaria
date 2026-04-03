@@ -38,8 +38,9 @@ export async function loginAction(
 
     // Check rate limit (5 attempts per 15 minutes) per IP
     const reqHeaders = await headers();
-    const clientIp = getClientIp(reqHeaders) || "unknown";
-    const rateLimit = checkRateLimit(`login:${clientIp}`, 5, 15 * 60 * 1000);
+    const clientIp = getClientIp(reqHeaders);
+    // Use both Email and IP to avoid global lockout on shared IPs/Proxies
+    const rateLimit = checkRateLimit(`login:${validEmail}:${clientIp}`, 5, 15 * 60 * 1000);
 
     if (!rateLimit.allowed) {
         return {
