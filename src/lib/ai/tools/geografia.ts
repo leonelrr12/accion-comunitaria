@@ -8,11 +8,10 @@ export const listarProvincias: Tool = {
   description: 'Obtener todas las provincias registradas',
   parameters: z.object({}),
   execute: async () => {
-    const provincias = await prisma.province.findMany({
+    return prisma.province.findMany({
       select: { id: true, name: true },
       orderBy: { name: 'asc' },
     })
-    return provincias
   },
 }
 
@@ -27,10 +26,15 @@ export const listarDistritos: Tool = {
     const where = provincia_id ? { provinceId: provincia_id as number } : {}
     const distritos = await prisma.district.findMany({
       where,
-      include: { province: { select: { name: true } } },
+      select: {
+        id: true,
+        name: true,
+        province: { select: { name: true } },
+      },
       orderBy: { name: 'asc' },
     })
-    return distritos.map((d: { id: number; name: string; province: { name: string } }) => ({
+
+    return distritos.map((d) => ({
       id: d.id,
       name: d.name,
       provincia: d.province.name,
@@ -49,12 +53,20 @@ export const listarCorregimientos: Tool = {
     const where = distrito_id ? { districtId: distrito_id as number } : {}
     const corregimientos = await prisma.corregimiento.findMany({
       where,
-      include: {
-        district: { select: { name: true, province: { select: { name: true } } } },
+      select: {
+        id: true,
+        name: true,
+        district: {
+          select: {
+            name: true,
+            province: { select: { name: true } },
+          },
+        },
       },
       orderBy: { name: 'asc' },
     })
-    return corregimientos.map((c: { id: number; name: string; district: { name: string; province: { name: string } } }) => ({
+
+    return corregimientos.map((c) => ({
       id: c.id,
       name: c.name,
       distrito: c.district.name,
@@ -74,7 +86,9 @@ export const listarComunidades: Tool = {
     const where = corregimiento_id ? { corregimientoId: corregimiento_id as number } : {}
     const comunidades = await prisma.community.findMany({
       where,
-      include: {
+      select: {
+        id: true,
+        name: true,
         corregimiento: {
           select: {
             name: true,
@@ -84,7 +98,8 @@ export const listarComunidades: Tool = {
       },
       orderBy: { name: 'asc' },
     })
-    return comunidades.map((c: { id: number; name: string; corregimiento: { name: string; district: { name: string } } }) => ({
+
+    return comunidades.map((c) => ({
       id: c.id,
       name: c.name,
       corregimiento: c.corregimiento.name,
@@ -94,6 +109,7 @@ export const listarComunidades: Tool = {
 }
 
 // Buscar ubicación completa
+// OPTIMIZADO: reemplazado `include` con `select` en todas las sub-queries para evitar over-fetching
 export const buscarUbicacion: Tool = {
   name: 'buscar_ubicacion',
   description: 'Buscar ubicación geográfica (provincia, distrito, corregimiento o comunidad) por nombre',
@@ -101,42 +117,58 @@ export const buscarUbicacion: Tool = {
     query: z.string().describe('Nombre a buscar'),
   }),
   execute: async ({ query }) => {
+    const q = query as string
+
     const [provincias, distritos, corregimientos, comunidades] = await Promise.all([
       prisma.province.findMany({
-        where: { name: { contains: query as string, mode: 'insensitive' } },
+        where: { name: { contains: q, mode: 'insensitive' } },
+        select: { id: true, name: true },
         take: 5,
       }),
       prisma.district.findMany({
-        where: { name: { contains: query as string, mode: 'insensitive' } },
+        where: { name: { contains: q, mode: 'insensitive' } },
+        select: { id: true, name: true, province: { select: { name: true } } },
         take: 5,
-        include: { province: true },
       }),
       prisma.corregimiento.findMany({
-        where: { name: { contains: query as string, mode: 'insensitive' } },
+        where: { name: { contains: q, mode: 'insensitive' } },
+        select: {
+          id: true,
+          name: true,
+          district: { select: { name: true, province: { select: { name: true } } } },
+        },
         take: 5,
-        include: { district: { include: { province: true } } },
       }),
       prisma.community.findMany({
-        where: { name: { contains: query as string, mode: 'insensitive' } },
+        where: { name: { contains: q, mode: 'insensitive' } },
+        select: {
+          id: true,
+          name: true,
+          corregimiento: {
+            select: {
+              name: true,
+              district: { select: { name: true, province: { select: { name: true } } } },
+            },
+          },
+        },
         take: 5,
-        include: { corregimiento: { include: { district: { include: { province: true } } } } },
       }),
     ])
 
     return {
-      provincias: provincias.map((p: { id: number; name: string }) => ({ id: p.id, name: p.name })),
-      distritos: distritos.map((d: { id: number; name: string; province: { name: string } }) => ({
+      provincias,
+      distritos: distritos.map((d) => ({
         id: d.id,
         name: d.name,
         provincia: d.province.name,
       })),
-      corregimientos: corregimientos.map((c: { id: number; name: string; district: { name: string; province: { name: string } } }) => ({
+      corregimientos: corregimientos.map((c) => ({
         id: c.id,
         name: c.name,
         distrito: c.district.name,
         provincia: c.district.province.name,
       })),
-      comunidades: comunidades.map((c: { id: number; name: string; corregimiento: { name: string; district: { name: string; province: { name: string } } } }) => ({
+      comunidades: comunidades.map((c) => ({
         id: c.id,
         name: c.name,
         corregimiento: c.corregimiento.name,

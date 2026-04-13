@@ -1,46 +1,105 @@
 import ollama from 'ollama'
-import { zodToJsonSchema } from 'zod-to-json-schema'
+import { z } from 'zod'
 import { Tool, ToolDefinition, ChatMessage, AgentResponse } from './types'
 import { allTools } from './tools'
 
-// Convertir tools a formato Ollama
-function toolsToOllamaFormat(tools: Tool[]): ToolDefinition[] {
-  return tools.map(tool => ({
-    type: 'function' as const,
-    function: {
-      name: tool.name,
-      description: tool.description,
-      parameters: {
-        type: 'object' as const,
-        properties: Object.entries(tool.parameters.shape).reduce((acc, [key, schema]) => {
-          const jsonSchema = zodToJsonSchema(schema as any)
-          acc[key] = {
-            type: (jsonSchema as any).type || 'string',
-            description: (jsonSchema as any).description,
-          }
-          return acc
-        }, {} as Record<string, any>),
-        required: Object.keys(tool.parameters.shape).filter(
-          key => !(tool.parameters.shape[key] as any).isOptional
-        ),
-      },
-    },
-  }))
+// Logger condicional — activa con DEBUG_AGENT=true en variables de entorno
+// Evita exponer datos sensibles (cédulas, emails, resultados de BD) en producción
+const log = process.env.DEBUG_AGENT === 'true'
+  ? (...args: unknown[]) => console.log(...args)
+  : () => {}
+
+// ─── Conversión de tools a formato Ollama ────────────────────────────────────
+//
+// Compatible con Zod v4, donde las clases internas (ZodOptional, ZodDefault,
+// etc.) ya no se exportan y _def.innerType no existe.
+// En su lugar usamos schema._def.type (string discriminator) y
+// schema._def.innerType fue reemplazado por schema._def.inner en v4.
+
+type ZodDefAny = {
+  type?: string
+  typeName?: string       // Zod v3 fallback
+  inner?: ZodDefAny       // Zod v4: innerType de Optional/Default
+  innerType?: ZodDefAny   // Zod v3: innerType de Optional/Default
+  description?: string
 }
 
-// Sistema prompt para el agente
-const SYSTEM_PROMPT = `Eres un asistente administrativo para el sistema de Acción Comunitaria de Panamá.
+function unwrapDef(def: ZodDefAny): ZodDefAny {
+  // Desenvolver optional/default/nullable para llegar al tipo base
+  const typeName = def.type ?? def.typeName ?? ''
+  if (typeName === 'optional' || typeName === 'ZodOptional' ||
+      typeName === 'default'  || typeName === 'ZodDefault'  ||
+      typeName === 'nullable' || typeName === 'ZodNullable') {
+    const inner = def.inner ?? def.innerType
+    if (inner) return unwrapDef(inner)
+  }
+  return def
+}
+
+type JsonPrimitiveType = 'string' | 'number' | 'boolean' | 'array' | 'object'
+
+function zodTypeToJsonType(schema: z.ZodTypeAny): JsonPrimitiveType {
+  const raw = (schema as unknown as { _def: ZodDefAny })._def
+  const def = unwrapDef(raw)
+  const typeName = (def.type ?? def.typeName ?? '').toLowerCase()
+
+  if (typeName.includes('number')) return 'number'
+  if (typeName.includes('boolean')) return 'boolean'
+  if (typeName.includes('array')) return 'array'
+  if (typeName.includes('object')) return 'object'
+  return 'string'
+}
+
+function isOptionalSchema(schema: z.ZodTypeAny): boolean {
+  const raw = (schema as unknown as { _def: ZodDefAny })._def
+  const typeName = (raw.type ?? raw.typeName ?? '').toLowerCase()
+  return typeName.includes('optional') || typeName.includes('default')
+}
+
+function extractDescription(schema: z.ZodTypeAny): string | undefined {
+  const raw = (schema as unknown as { _def: ZodDefAny })._def
+  // Descripción puede estar en el wrapper (optional/default) o en el tipo base
+  return raw.description ?? unwrapDef(raw).description
+}
+
+function toolsToOllamaFormat(tools: Tool[]): ToolDefinition[] {
+  return tools.map(tool => {
+    const shape = tool.parameters.shape as Record<string, z.ZodTypeAny>
+
+    const properties = Object.entries(shape).reduce<Record<string, { type: JsonPrimitiveType; description?: string }>>((acc, [key, schema]) => {
+      const description = extractDescription(schema)
+      acc[key] = {
+        type: zodTypeToJsonType(schema),
+        ...(description ? { description } : {}),
+      }
+      return acc
+    }, {})
+
+    // Campo es requerido si NO es optional ni tiene default
+    const required = Object.keys(shape).filter(key => !isOptionalSchema(shape[key]))
+
+    return {
+      type: 'function' as const,
+      function: {
+        name: tool.name,
+        description: tool.description,
+        parameters: {
+          type: 'object' as const,
+          properties,
+          required,
+        },
+      },
+    }
+  })
+}
+
+// ─── System prompt ────────────────────────────────────────────────────────────
+//
+// FIX: El prompt ahora se genera dinámicamente a partir de las tools registradas,
+// por lo que siempre está sincronizado sin importar cuántas tools se agreguen.
+
+const BASE_PROMPT = `Eres un asistente administrativo para el sistema de Acción Comunitaria de Panamá.
 Tu función es ayudar a gestionar personas, líderes y comunidades.
-
-Tienes acceso a las siguientes herramientas:
-
-1. buscar_persona(query) - Buscar por nombre, apellido o cédula
-2. buscar_persona_por_id(id) - Obtener detalles por ID
-3. crear_persona(nombre, apellido, cedula, telefono?, email?) - Crear nueva persona
-4. actualizar_persona(id, nombre?, apellido?, telefono?, email?, community_id?, leader_user_id?) - Actualizar datos
-5. eliminar_persona(id) - Eliminar persona por ID
-6. asignar_lider(persona_id, lider_id) - Asignar líder a persona
-7. listar_personas(limite?, pagina?) - Listar personas paginadas
 
 REGLAS IMPORTANTES:
 1. Siempre responde en español
@@ -49,7 +108,6 @@ REGLAS IMPORTANTES:
 4. Si el usuario menciona un ID, úsalo directamente
 
 EJEMPLOS DE USO:
-
 Usuario: "actualiza el teléfono de la persona con ID 5 a 8888-9999"
 Acción: Llamar actualizar_persona(id=5, telefono="8888-9999")
 
@@ -67,384 +125,403 @@ Contexto del sistema:
 - Las personas pueden tener un líder asignado
 - Los usuarios pueden ser administradores o líderes`
 
+function buildSystemPrompt(tools: Tool[]): string {
+  const toolList = tools
+    .map(t => `- ${t.name}: ${t.description}`)
+    .join('\n')
+  return `${BASE_PROMPT}\n\nHerramientas disponibles:\n${toolList}`
+}
+
+// ─── Formatters de resultados ─────────────────────────────────────────────────
+//
+// FIX: El switch gigante fue reemplazado por un mapa de funciones formatter.
+// Cada tool tiene su formatter tipado. Agregar una tool nueva = agregar una
+// entrada al mapa, sin tocar el resto de la clase.
+
+type Formatter = (result: unknown) => string[]
+
+const formatters: Record<string, Formatter> = {
+  // === PERSONAS ===
+  buscar_persona: (result) => {
+    const personas = result as Array<{ id: number; name: string; lastName: string; cedula: string; community?: { name: string }; leader?: { name: string; lastName: string } }>
+    if (personas.length === 0) return ['❌ No se encontraron personas.']
+    const lines = [`✅ Se encontraron ${personas.length} persona(s):`]
+    personas.forEach(p => {
+      const comunidad = p.community?.name ? ` - ${p.community.name}` : ''
+      const lider = p.leader ? ` (Líder: ${p.leader.name} ${p.leader.lastName})` : ''
+      lines.push(`• ${p.name} ${p.lastName} (ID: ${p.id}, Cédula: ${p.cedula})${comunidad}${lider}`)
+    })
+    return lines
+  },
+
+  buscar_persona_por_id: (result) => {
+    const r = result as { success: boolean; persona?: any; error?: string }
+    if (!r.success) return [`❌ ${r.error}`]
+    const p = r.persona
+    const lines = ['📋 Detalles de la persona:',
+      `• Nombre: ${p.name} ${p.lastName}`,
+      `• Cédula: ${p.cedula}`,
+    ]
+    if (p.phone) lines.push(`• Teléfono: ${p.phone}`)
+    if (p.email) lines.push(`• Email: ${p.email}`)
+    if (p.province) lines.push(`• Provincia: ${p.province.name}`)
+    if (p.district) lines.push(`• Distrito: ${p.district.name}`)
+    if (p.corregimiento) lines.push(`• Corregimiento: ${p.corregimiento.name}`)
+    if (p.community) lines.push(`• Comunidad: ${p.community.name}`)
+    if (p.leader) lines.push(`• Líder: ${p.leader.name} ${p.leader.lastName}`)
+    return lines
+  },
+
+  crear_persona: (result) => {
+    const r = result as { success: boolean; id?: number; error?: string }
+    return r.success
+      ? [`✅ Persona creada exitosamente con ID: ${r.id}`]
+      : [`❌ Error: ${r.error}`]
+  },
+
+  actualizar_persona: (result) => {
+    const r = result as { success: boolean; persona?: any; error?: string }
+    if (!r.success) return [`❌ ${r.error}`]
+    return [
+      '✅ Persona actualizada correctamente',
+      `• ${r.persona.name} ${r.persona.lastName} (ID: ${r.persona.id})`,
+    ]
+  },
+
+  eliminar_persona: (result) => {
+    const r = result as { success: boolean; message?: string; error?: string }
+    return r.success ? [`✅ ${r.message}`] : [`❌ ${r.error}`]
+  },
+
+  asignar_lider: (result) => {
+    const r = result as { success: boolean; message?: string; error?: string }
+    return r.success ? [`✅ ${r.message}`] : [`❌ ${r.error}`]
+  },
+
+  listar_personas: (result) => {
+    const r = result as { personas: any[]; total: number; pagina: number; totalPaginas: number }
+    const lines = [`📋 Lista de personas (Página ${r.pagina} de ${r.totalPaginas}, Total: ${r.total}):`]
+    r.personas.forEach(p => {
+      const comunidad = p.community?.name ? ` - ${p.community.name}` : ''
+      lines.push(`• [${p.id}] ${p.name} ${p.lastName} (${p.cedula})${comunidad}`)
+    })
+    return lines
+  },
+
+  personas_por_comunidad: (result) => {
+    const r = result as { comunidad: string; total: number }
+    return [`📊 Personas en ${r.comunidad || 'la comunidad'}: ${r.total}`]
+  },
+
+  afiliados_de_lider: (result) => {
+    const r = result as { lider: any; total: number; afiliados: any[] }
+    const lines = [`👥 Afiliados de ${r.lider.name} ${r.lider.lastName}: ${r.total} personas`]
+    r.afiliados.forEach(a => {
+      const comunidad = a.community?.name ? ` (${a.community.name})` : ''
+      lines.push(`• ${a.name} ${a.lastName} - ${a.cedula}${comunidad}`)
+    })
+    return lines
+  },
+
+  // === USUARIOS ===
+  buscar_usuario: (result) => {
+    const usuarios = result as any[]
+    if (usuarios.length === 0) return ['❌ No se encontraron usuarios.']
+    const lines = [`✅ Se encontraron ${usuarios.length} usuario(s):`]
+    usuarios.forEach(u => {
+      lines.push(`• [${u.id}] ${u.name} ${u.lastName} (${u.email}) - ${u.role} - ${u.afiliados} afiliados`)
+    })
+    return lines
+  },
+
+  listar_usuarios: (result) => {
+    const r = result as { usuarios: any[]; total: number; pagina: number; totalPaginas: number }
+    const lines = [`📋 Lista de usuarios (Página ${r.pagina} de ${r.totalPaginas}, Total: ${r.total}):`]
+    r.usuarios.forEach(u => {
+      const comunidad = u.community ? ` - ${u.community}` : ''
+      lines.push(`• [${u.id}] ${u.name} ${u.lastName} (${u.role}) - ${u.afiliados} afiliados${comunidad}`)
+    })
+    return lines
+  },
+
+  usuario_por_id: (result) => {
+    const r = result as { success: boolean; usuario?: any; error?: string }
+    if (!r.success) return [`❌ ${r.error}`]
+    const u = r.usuario
+    const lines = ['👤 Detalles del usuario:',
+      `• Nombre: ${u.name} ${u.lastName}`,
+      `• Email: ${u.email}`,
+      `• Rol: ${u.role.name}`,
+    ]
+    if (u.phone) lines.push(`• Teléfono: ${u.phone}`)
+    if (u.community) lines.push(`• Comunidad: ${u.community}`)
+    lines.push(`• Afiliados: ${u.afiliados}`)
+    return lines
+  },
+
+  estadisticas_usuario: (result) => {
+    const r = result as { usuario: any; totalAfiliados: number; distribucionPorComunidad: Array<{ comunidad: string; cantidad: number }> }
+    const lines = [
+      `📊 Estadísticas de ${r.usuario.nombre}:`,
+      `• Total afiliados: ${r.totalAfiliados}`,
+    ]
+    if (r.distribucionPorComunidad.length > 0) {
+      lines.push('• Distribución por comunidad:')
+      r.distribucionPorComunidad.forEach(d => lines.push(`  - ${d.comunidad}: ${d.cantidad}`))
+    }
+    return lines
+  },
+
+  listar_roles: (result) => {
+    const roles = result as Array<{ id: number; name: string; usuarios: number }>
+    const lines = ['📋 Roles disponibles:']
+    roles.forEach(r => lines.push(`• [${r.id}] ${r.name} - ${r.usuarios} usuarios`))
+    return lines
+  },
+
+  // === ESTADÍSTICAS ===
+  total_personas: (result) => {
+    const r = result as { total: number }
+    return [`📊 Total de personas registradas: ${r.total}`]
+  },
+
+  estadisticas_generales: (result) => {
+    const r = result as { personas: number; usuarios: number; provincias: number; distritos: number; corregimientos: number; comunidades: number }
+    return [
+      '📊 Estadísticas del sistema:',
+      `• Personas: ${r.personas}`,
+      `• Usuarios: ${r.usuarios}`,
+      `• Provincias: ${r.provincias}`,
+      `• Distritos: ${r.distritos}`,
+      `• Corregimientos: ${r.corregimientos}`,
+      `• Comunidades: ${r.comunidades}`,
+    ]
+  },
+
+  ranking_lideres: (result) => {
+    const ranking = result as Array<{ id: number; nombre: string; rol: string; afiliados: number }>
+    const lines = ['🏆 Ranking de líderes:']
+    ranking.forEach((l, i) => lines.push(`${i + 1}. ${l.nombre} (${l.rol}): ${l.afiliados} afiliados`))
+    return lines
+  },
+
+  personas_por_provincia: (result) => {
+    const r = result as Array<{ provincia: string; total: number }>
+    const lines = ['📊 Personas por provincia:']
+    r.forEach(p => lines.push(`• ${p.provincia}: ${p.total}`))
+    return lines
+  },
+
+  personas_por_distrito: (result) => {
+    const r = result as { distrito: string; provincia: string; total: number }
+    return [`📊 ${r.distrito} (${r.provincia}): ${r.total} personas`]
+  },
+
+  // === GEOGRAFÍA ===
+  listar_provincias: (result) => {
+    const r = result as Array<{ id: number; name: string }>
+    const lines = ['📋 Provincias:']
+    r.forEach(p => lines.push(`• [${p.id}] ${p.name}`))
+    return lines
+  },
+
+  listar_distritos: (result) => {
+    const r = result as Array<{ id: number; name: string; provincia: string }>
+    const lines = ['📋 Distritos:']
+    r.forEach(d => lines.push(`• [${d.id}] ${d.name} (${d.provincia})`))
+    return lines
+  },
+
+  listar_corregimientos: (result) => {
+    const r = result as Array<{ id: number; name: string; distrito: string; provincia: string }>
+    const lines = ['📋 Corregimientos:']
+    r.forEach(c => lines.push(`• [${c.id}] ${c.name} (${c.distrito}, ${c.provincia})`))
+    return lines
+  },
+
+  listar_comunidades: (result) => {
+    const r = result as Array<{ id: number; name: string; corregimiento: string; distrito: string }>
+    const lines = ['📋 Comunidades:']
+    r.forEach(c => lines.push(`• [${c.id}] ${c.name} (${c.corregimiento}, ${c.distrito})`))
+    return lines
+  },
+
+  buscar_ubicacion: (result) => {
+    const r = result as { provincias: any[]; distritos: any[]; corregimientos: any[]; comunidades: any[] }
+    const totalUbicaciones = r.provincias.length + r.distritos.length + r.corregimientos.length + r.comunidades.length
+    const lines = [`🔍 Se encontraron ${totalUbicaciones} resultado(s):`]
+    if (r.provincias.length > 0) {
+      lines.push('Provincias:')
+      r.provincias.forEach(p => lines.push(`• [${p.id}] ${p.name}`))
+    }
+    if (r.distritos.length > 0) {
+      lines.push('Distritos:')
+      r.distritos.forEach(d => lines.push(`• [${d.id}] ${d.name} (${d.provincia})`))
+    }
+    if (r.corregimientos.length > 0) {
+      lines.push('Corregimientos:')
+      r.corregimientos.forEach(c => lines.push(`• [${c.id}] ${c.name} (${c.distrito}, ${c.provincia})`))
+    }
+    if (r.comunidades.length > 0) {
+      lines.push('Comunidades:')
+      r.comunidades.forEach(c => lines.push(`• [${c.id}] ${c.name} (${c.corregimiento}, ${c.distrito})`))
+    }
+    return lines
+  },
+}
+
+// Formatter por defecto para tools sin formatter registrado
+function defaultFormatter(name: string, result: unknown): string[] {
+  return [`📋 Resultado de ${name}:\n${JSON.stringify(result, null, 2)}`]
+}
+
+// ─── Clase Agent ──────────────────────────────────────────────────────────────
+
 export class Agent {
   private model: string
   private tools: Tool[]
   private toolDefinitions: ToolDefinition[]
+  private systemPrompt: string
 
-  //qwen2.5:1.5b
-  //'qwen2.5'
+  // qwen2.5:1.5b → modelo ligero para desarrollo
+  // qwen2.5       → modelo completo para producción
   constructor(model: string = 'qwen2.5', tools: Tool[] = allTools) {
     this.model = model
     this.tools = tools
     this.toolDefinitions = toolsToOllamaFormat(tools)
+    // FIX: system prompt generado dinámicamente desde las tools registradas
+    this.systemPrompt = buildSystemPrompt(tools)
   }
 
-  // Procesar mensaje del usuario
+  // ── Ejecutar una lista de tool calls y devolver los resultados ──────────────
+  //
+  // Extraído como método privado para reutilizarlo en chat() y streamChat().
+  //
+  // FIXES aplicados aquí:
+  //   1. tool.execute() recibe parsedArgs.data (validado por Zod), no toolArgs (raw del modelo)
+  //   2. try/catch por tool — un error en la BD no tumba el resto de tool calls
+  //   3. onToolCall recibe los args validados, no los raw
+
+  private async executeToolCalls(
+    toolCalls: Array<{ function: { name: string; arguments: Record<string, unknown> } }>,
+    onToolCall?: (name: string, args: Record<string, unknown>) => void
+  ): Promise<Array<{ name: string; args: Record<string, unknown>; result: unknown }>> {
+    const results = []
+
+    for (const toolCall of toolCalls) {
+      const toolName = toolCall.function.name
+      const toolArgs = toolCall.function.arguments as Record<string, unknown>
+
+      const tool = this.tools.find(t => t.name === toolName)
+      if (!tool) {
+        log(`[Agent] Tool no encontrada: ${toolName}`)
+        continue
+      }
+
+      // Preprocesar: convertir strings numéricos a números
+      const processedArgs: Record<string, unknown> = {}
+      for (const [key, value] of Object.entries(toolArgs)) {
+        processedArgs[key] = typeof value === 'string' && /^\d+$/.test(value)
+          ? parseInt(value, 10)
+          : value
+      }
+
+      // Validar con Zod
+      const parsedArgs = tool.parameters.safeParse(processedArgs)
+      if (!parsedArgs.success) {
+        log(`[Agent] Error de validación en ${toolName}:`, parsedArgs.error.flatten())
+        results.push({
+          name: toolName,
+          args: processedArgs,
+          result: { success: false, error: `Argumentos inválidos: ${parsedArgs.error.message}` },
+        })
+        continue
+      }
+
+      // Notificar callback con args validados
+      onToolCall?.(toolName, parsedArgs.data)
+
+      // FIX: ejecutar con parsedArgs.data (no con toolArgs raw)
+      // FIX: try/catch para aislar errores por tool
+      let result: unknown
+      try {
+        result = await tool.execute(parsedArgs.data)
+        log(`[Agent] ${toolName} →`, result)
+      } catch (err) {
+        console.error(`[Agent] Error ejecutando tool ${toolName}:`, err)
+        result = { success: false, error: 'Error interno al ejecutar la operación' }
+      }
+
+      results.push({ name: toolName, args: parsedArgs.data, result })
+    }
+
+    return results
+  }
+
+  // ── Formatear resultados de tools ──────────────────────────────────────────
+
+  private formatToolResults(
+    results: Array<{ name: string; args: Record<string, unknown>; result: unknown }>
+  ): string {
+    return results
+      .flatMap(({ name, result }) => {
+        const formatter = formatters[name]
+        return formatter ? formatter(result) : defaultFormatter(name, result)
+      })
+      .join('\n')
+  }
+
+  // ── chat() — respuesta completa (sin stream) ────────────────────────────────
+
   async chat(
     messages: ChatMessage[],
     onToolCall?: (name: string, args: Record<string, unknown>) => void
   ): Promise<AgentResponse> {
-    console.log('=== AGENT DEBUG ===')
-    console.log('Model:', this.model)
-    console.log('Messages:', messages)
-    console.log('Tools count:', this.toolDefinitions.length)
+    log('[Agent] Iniciando chat. Modelo:', this.model, '| Tools:', this.toolDefinitions.length)
 
     const response = await ollama.chat({
       model: this.model,
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: this.systemPrompt },
         ...messages,
       ],
       tools: this.toolDefinitions,
     })
 
-    console.log('Ollama response:', JSON.stringify(response, null, 2))
+    log('[Agent] Respuesta de Ollama recibida')
 
     const message = response.message
 
-    // Si el modelo quiere usar una tool
     if (message.tool_calls && message.tool_calls.length > 0) {
-      console.log('Tool calls detected:', message.tool_calls.length)
-      const toolCallsResults = []
+      log(`[Agent] Tool calls detectados: ${message.tool_calls.length}`)
 
-      for (const toolCall of message.tool_calls) {
-        console.log('Processing tool call:', toolCall.function.name)
-        console.log('Raw arguments:', toolCall.function.arguments)
+      const toolCallsResults = await this.executeToolCalls(message.tool_calls, onToolCall)
 
-        const toolName = toolCall.function.name
-        const toolArgs = toolCall.function.arguments as Record<string, unknown>
+      const responseMessage = [
+        message.content || '',
+        toolCallsResults.length > 0 ? this.formatToolResults(toolCallsResults) : '',
+      ].filter(Boolean).join('\n\n')
 
-        // Buscar la tool correspondiente
-        const tool = this.tools.find(t => t.name === toolName)
-        if (!tool) {
-          console.error('Tool not found:', toolName)
-          continue
-        }
-
-        // Pre-procesar argumentos: convertir strings numéricos a números
-        const processedArgs: Record<string, unknown> = {}
-        for (const [key, value] of Object.entries(toolArgs)) {
-          if (typeof value === 'string' && /^\d+$/.test(value)) {
-            processedArgs[key] = parseInt(value, 10)
-          } else {
-            processedArgs[key] = value
-          }
-        }
-
-        // Validar argumentos con Zod
-        const parsedArgs = tool.parameters.safeParse(processedArgs)
-        if (!parsedArgs.success) {
-          console.error('Validation error:', parsedArgs.error)
-          continue
-        }
-
-        console.log('Validated args:', parsedArgs.data)
-
-        // Notificar si hay callback
-        onToolCall?.(toolName, toolArgs)
-
-        // Ejecutar la tool
-        const result = await tool.execute(toolArgs)
-        console.log('Tool result:', result)
-        toolCallsResults.push({
-          name: toolName,
-          args: toolArgs,
-          result,
-        })
-      }
-
-      // Construir respuesta con resultados de tools
-      let responseMessage = message.content || ''
-
-      if (toolCallsResults.length > 0) {
-        // Formatear resultados para mostrar al usuario
-        responseMessage += '\n\n' + this.formatToolResults(toolCallsResults)
-      }
-
-      return {
-        message: responseMessage,
-        toolCalls: toolCallsResults,
-      }
+      return { message: responseMessage, toolCalls: toolCallsResults }
     }
 
-    console.log('No tool calls, returning message:', message.content)
-    return {
-      message: message.content,
-    }
+    return { message: message.content }
   }
 
-  // Formatear resultados de tools para mostrar
-  private formatToolResults(results: Array<{ name: string; args: Record<string, unknown>; result: unknown }>): string {
-    const lines: string[] = []
+  // ── streamChat() — respuesta en tiempo real ────────────────────────────────
+  //
+  // FIX: Ahora maneja tool calls correctamente.
+  // Ollama acumula los tool calls en el chunk final (done=true).
+  // Se detectan, ejecutan y el resultado se emite como yield al final del stream.
 
-    for (const { name, result } of results) {
-      console.log(result)
-      switch (name) {
-        // === PERSONAS ===
-        case 'buscar_persona':
-          const personas = result as any[]
-          if (personas.length === 0) {
-            lines.push('❌ No se encontraron personas.')
-          } else {
-            lines.push(`✅ Se encontraron ${personas.length} persona(s):`)
-            personas.forEach((p: any) => {
-              const comunidad = p.community?.name ? ` - ${p.community.name}` : ''
-              const lider = p.leader ? ` (Líder: ${p.leader.name} ${p.leader.lastName})` : ''
-              lines.push(`• ${p.name} ${p.lastName} (ID: ${p.id}, Cédula: ${p.cedula})${comunidad}${lider}`)
-            })
-          }
-          break
-
-        case 'buscar_persona_por_id':
-          const personaDetallada = result as { success: boolean; persona?: any; error?: string }
-          if (!personaDetallada.success) {
-            lines.push(`❌ ${personaDetallada.error}`)
-          } else {
-            const p = personaDetallada.persona
-            lines.push(`📋 Detalles de la persona:`)
-            lines.push(`• Nombre: ${p.name} ${p.lastName}`)
-            lines.push(`• Cédula: ${p.cedula}`)
-            if (p.phone) lines.push(`• Teléfono: ${p.phone}`)
-            if (p.email) lines.push(`• Email: ${p.email}`)
-            if (p.province) lines.push(`• Provincia: ${p.province.name}`)
-            if (p.district) lines.push(`• Distrito: ${p.district.name}`)
-            if (p.corregimiento) lines.push(`• Corregimiento: ${p.corregimiento.name}`)
-            if (p.community) lines.push(`• Comunidad: ${p.community.name}`)
-            if (p.leader) lines.push(`• Líder: ${p.leader.name} ${p.leader.lastName}`)
-          }
-          break
-
-        case 'crear_persona':
-          const created = result as { success: boolean; id?: number; error?: string }
-          if (created.success) {
-            lines.push(`✅ Persona creada exitosamente con ID: ${created.id}`)
-          } else {
-            lines.push(`❌ Error: ${created.error}`)
-          }
-          break
-
-        case 'actualizar_persona':
-          const updated = result as { success: boolean; persona?: any; error?: string }
-          if (!updated.success) {
-            lines.push(`❌ ${updated.error}`)
-          } else {
-            lines.push(`✅ Persona actualizada correctamente`)
-            lines.push(`• ${updated.persona.name} ${updated.persona.lastName} (ID: ${updated.persona.id})`)
-          }
-          break
-
-        case 'eliminar_persona':
-          const deleted = result as { success: boolean; message?: string; error?: string }
-          if (deleted.success) {
-            lines.push(`✅ ${deleted.message}`)
-          } else {
-            lines.push(`❌ ${deleted.error}`)
-          }
-          break
-
-        case 'asignar_lider':
-          const assigned = result as { success: boolean; message?: string; error?: string }
-          if (assigned.success) {
-            lines.push(`✅ ${assigned.message}`)
-          } else {
-            lines.push(`❌ ${assigned.error}`)
-          }
-          break
-
-        case 'listar_personas':
-          const listaPersonas = result as { personas: any[]; total: number; pagina: number; totalPaginas: number }
-          lines.push(`📋 Lista de personas (Página ${listaPersonas.pagina} de ${listaPersonas.totalPaginas}, Total: ${listaPersonas.total}):`)
-          listaPersonas.personas.forEach((p: any) => {
-            const comunidad = p.community?.name ? ` - ${p.community.name}` : ''
-            lines.push(`• [${p.id}] ${p.name} ${p.lastName} (${p.cedula})${comunidad}`)
-          })
-          break
-
-        case 'personas_por_comunidad':
-          const porComunidad = result as { comunidad: string; total: number }
-          lines.push(`📊 Personas en ${porComunidad.comunidad || 'la comunidad'}: ${porComunidad.total}`)
-          break
-
-        case 'afiliados_de_lider':
-          const afiliados = result as { lider: any; total: number; afiliados: any[] }
-          lines.push(`👥 Afiliados de ${afiliados.lider.name} ${afiliados.lider.lastName}: ${afiliados.total} personas`)
-          if (afiliados.afiliados.length > 0) {
-            afiliados.afiliados.forEach((a: any) => {
-              const comunidad = a.community?.name ? ` (${a.community.name})` : ''
-              lines.push(`• ${a.name} ${a.lastName} - ${a.cedula}${comunidad}`)
-            })
-          }
-          break
-
-        // === USUARIOS ===
-        case 'buscar_usuario':
-          const usuarios = result as any[]
-          if (usuarios.length === 0) {
-            lines.push('❌ No se encontraron usuarios.')
-          } else {
-            lines.push(`✅ Se encontraron ${usuarios.length} usuario(s):`)
-            usuarios.forEach((u: any) => {
-              lines.push(`• [${u.id}] ${u.name} ${u.lastName} (${u.email}) - ${u.role} - ${u.afiliados} afiliados`)
-            })
-          }
-          break
-
-        case 'listar_usuarios':
-          const listaUsuarios = result as { usuarios: any[]; total: number; pagina: number; totalPaginas: number }
-          lines.push(`📋 Lista de usuarios (Página ${listaUsuarios.pagina} de ${listaUsuarios.totalPaginas}, Total: ${listaUsuarios.total}):`)
-          listaUsuarios.usuarios.forEach((u: any) => {
-            const comunidad = u.community ? ` - ${u.community}` : ''
-            lines.push(`• [${u.id}] ${u.name} ${u.lastName} (${u.role}) - ${u.afiliados} afiliados${comunidad}`)
-          })
-          break
-
-        case 'usuario_por_id':
-          const usuarioDetallado = result as { success: boolean; usuario?: any; error?: string }
-          if (!usuarioDetallado.success) {
-            lines.push(`❌ ${usuarioDetallado.error}`)
-          } else {
-            const u = usuarioDetallado.usuario
-            lines.push(`👤 Detalles del usuario:`)
-            lines.push(`• Nombre: ${u.name} ${u.lastName}`)
-            lines.push(`• Email: ${u.email}`)
-            lines.push(`• Rol: ${u.role.name}`)
-            if (u.phone) lines.push(`• Teléfono: ${u.phone}`)
-            if (u.community) lines.push(`• Comunidad: ${u.community}`)
-            lines.push(`• Afiliados: ${u.afiliados}`)
-          }
-          break
-
-        case 'estadisticas_usuario':
-          const statsUsuario = result as { usuario: any; totalAfiliados: number; distribucionPorComunidad: any[] }
-          lines.push(`📊 Estadísticas de ${statsUsuario.usuario.nombre}:`)
-          lines.push(`• Total afiliados: ${statsUsuario.totalAfiliados}`)
-          if (statsUsuario.distribucionPorComunidad.length > 0) {
-            lines.push(`• Distribución por comunidad:`)
-            statsUsuario.distribucionPorComunidad.forEach((d: any) => {
-              lines.push(`  - ${d.comunidad}: ${d.cantidad}`)
-            })
-          }
-          break
-
-        case 'listar_roles':
-          const roles = result as any[]
-          lines.push(`📋 Roles disponibles:`)
-          roles.forEach((r: any) => {
-            lines.push(`• [${r.id}] ${r.name} - ${r.usuarios} usuarios`)
-          })
-          break
-
-        // === ESTADÍSTICAS ===
-        case 'total_personas':
-          const total = result as { total: number }
-          lines.push(`📊 Total de personas registradas: ${total.total}`)
-          break
-
-        case 'estadisticas_generales':
-          const stats = result as {
-            personas: number
-            usuarios: number
-            provincias: number
-            distritos: number
-            corregimientos: number
-            comunidades: number
-          }
-          lines.push('📊 Estadísticas del sistema:')
-          lines.push(`• Personas: ${stats.personas}`)
-          lines.push(`• Usuarios: ${stats.usuarios}`)
-          lines.push(`• Provincias: ${stats.provincias}`)
-          lines.push(`• Distritos: ${stats.distritos}`)
-          lines.push(`• Corregimientos: ${stats.corregimientos}`)
-          lines.push(`• Comunidades: ${stats.comunidades}`)
-          break
-
-        case 'ranking_lideres':
-          const ranking = result as Array<{ id: number; nombre: string; rol: string; afiliados: number }>
-          lines.push('🏆 Ranking de líderes:')
-          ranking.forEach((l, i) => {
-            lines.push(`${i + 1}. ${l.nombre} (${l.rol}): ${l.afiliados} afiliados`)
-          })
-          break
-
-        case 'personas_por_provincia':
-          const porProvincia = result as Array<{ provincia: string; total: number }>
-          lines.push('📊 Personas por provincia:')
-          porProvincia.forEach((p) => {
-            lines.push(`• ${p.provincia}: ${p.total}`)
-          })
-          break
-
-        case 'personas_por_distrito':
-          const porDistrito = result as { distrito: string; provincia: string; total: number }
-          lines.push(`📊 ${porDistrito.distrito} (${porDistrito.provincia}): ${porDistrito.total} personas`)
-          break
-
-        // === GEOGRAFÍA ===
-        case 'listar_provincias':
-          const provincias = result as Array<{ id: number; name: string }>
-          lines.push('📋 Provincias:')
-          provincias.forEach(p => lines.push(`• [${p.id}] ${p.name}`))
-          break
-
-        case 'listar_distritos':
-          const distritos = result as Array<{ id: number; name: string; provincia: string }>
-          lines.push('📋 Distritos:')
-          distritos.forEach(d => lines.push(`• [${d.id}] ${d.name} (${d.provincia})`))
-          break
-
-        case 'listar_corregimientos':
-          const corregimientos = result as Array<{ id: number; name: string; distrito: string; provincia: string }>
-          lines.push('📋 Corregimientos:')
-          corregimientos.forEach(c => lines.push(`• [${c.id}] ${c.name} (${c.distrito}, ${c.provincia})`))
-          break
-
-        case 'listar_comunidades':
-          const comunidades = result as Array<{ id: number; name: string; corregimiento: string; distrito: string }>
-          lines.push('📋 Comunidades:')
-          comunidades.forEach(c => lines.push(`• [${c.id}] ${c.name} (${c.corregimiento}, ${c.distrito})`))
-          break
-
-        case 'buscar_ubicacion':
-          const ubicaciones = result as { provincias: any[]; distritos: any[]; corregimientos: any[]; comunidades: any[] }
-          const totalUbicaciones = ubicaciones.provincias.length + ubicaciones.distritos.length +
-                                   ubicaciones.corregimientos.length + ubicaciones.comunidades.length
-          lines.push(`🔍 Se encontraron ${totalUbicaciones} resultado(s):`)
-
-          if (ubicaciones.provincias.length > 0) {
-            lines.push('Provincias:')
-            ubicaciones.provincias.forEach((p: any) => lines.push(`• [${p.id}] ${p.name}`))
-          }
-          if (ubicaciones.distritos.length > 0) {
-            lines.push('Distritos:')
-            ubicaciones.distritos.forEach((d: any) => lines.push(`• [${d.id}] ${d.name} (${d.provincia})`))
-          }
-          if (ubicaciones.corregimientos.length > 0) {
-            lines.push('Corregimientos:')
-            ubicaciones.corregimientos.forEach((c: any) => lines.push(`• [${c.id}] ${c.name} (${c.distrito}, ${c.provincia})`))
-          }
-          if (ubicaciones.comunidades.length > 0) {
-            lines.push('Comunidades:')
-            ubicaciones.comunidades.forEach((c: any) => lines.push(`• [${c.id}] ${c.name} (${c.corregimiento}, ${c.distrito})`))
-          }
-          break
-
-        default:
-          lines.push(`Resultados de ${name}: ${JSON.stringify(result, null, 2)}`)
-      }
-    }
-
-    return lines.join('\n')
-  }
-
-  // Stream de respuesta (para chat en tiempo real)
   async *streamChat(
-    messages: ChatMessage[]
+    messages: ChatMessage[],
+    onToolCall?: (name: string, args: Record<string, unknown>) => void
   ): AsyncGenerator<string> {
     const stream = await ollama.chat({
       model: this.model,
       messages: [
-        { role: 'system', content: SYSTEM_PROMPT },
+        { role: 'system', content: this.systemPrompt },
         ...messages,
       ],
       tools: this.toolDefinitions,
@@ -452,17 +529,31 @@ export class Agent {
     })
 
     for await (const chunk of stream) {
+      // Emitir texto de respuesta a medida que llega
       if (chunk.message.content) {
         yield chunk.message.content
+      }
+
+      // FIX: manejar tool calls en el chunk final
+      if (chunk.done && chunk.message.tool_calls && chunk.message.tool_calls.length > 0) {
+        log(`[Agent] Stream: tool calls detectados en chunk final: ${chunk.message.tool_calls.length}`)
+
+        const toolCallsResults = await this.executeToolCalls(chunk.message.tool_calls, onToolCall)
+
+        if (toolCallsResults.length > 0) {
+          yield '\n\n' + this.formatToolResults(toolCallsResults)
+        }
       }
     }
   }
 }
 
+// ─── Exports ──────────────────────────────────────────────────────────────────
+
 // Instancia por defecto del agente
 export const agent = new Agent()
 
-// Función helper para crear instancias con modelo personalizado
-export function createAgent(model: string): Agent {
-  return new Agent(model)
+// Helper para crear instancias con modelo personalizado
+export function createAgent(model: string, tools?: Tool[]): Agent {
+  return new Agent(model, tools)
 }

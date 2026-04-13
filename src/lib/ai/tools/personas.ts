@@ -19,7 +19,13 @@ export const buscarPersona: Tool = {
         ],
       },
       take: 10,
-      include: {
+      select: {
+        id: true,
+        name: true,
+        lastName: true,
+        cedula: true,
+        phone: true,
+        email: true,
         community: { select: { name: true } },
         leader: { select: { name: true, lastName: true } },
       },
@@ -42,9 +48,9 @@ export const crearPersona: Tool = {
     leader_user_id: z.number().describe('ID del líder asignado obligatoriamente'),
   }),
   execute: async (args) => {
-    // Verificar si la cédula ya existe
     const existeCedula = await prisma.person.findUnique({
       where: { cedula: args.cedula as string },
+      select: { id: true },
     })
     if (existeCedula) {
       return { success: false, error: 'Ya existe una persona con esta cédula' }
@@ -60,12 +66,14 @@ export const crearPersona: Tool = {
         communityId: args.community_id as number | undefined,
         leaderUserId: args.leader_user_id as number,
       },
+      select: { id: true },
     })
     return { success: true, id: persona.id }
   },
 }
 
 // Personas por comunidad
+// OPTIMIZADO: de 2 queries (count + findUnique) a 1 query con _count
 export const personasPorComunidad: Tool = {
   name: 'personas_por_comunidad',
   description: 'Obtener la cantidad de personas en una comunidad específica',
@@ -73,14 +81,19 @@ export const personasPorComunidad: Tool = {
     comunidad_id: z.number().describe('ID de la comunidad'),
   }),
   execute: async ({ comunidad_id }) => {
-    const count = await prisma.person.count({
-      where: { communityId: comunidad_id as number },
-    })
     const comunidad = await prisma.community.findUnique({
       where: { id: comunidad_id as number },
-      select: { name: true },
+      select: {
+        name: true,
+        _count: { select: { persons: true } },
+      },
     })
-    return { comunidad: comunidad?.name, total: count }
+
+    if (!comunidad) {
+      return { error: 'Comunidad no encontrada' }
+    }
+
+    return { comunidad: comunidad.name, total: comunidad._count.persons }
   },
 }
 
@@ -94,20 +107,31 @@ export const afiliadosDeLider: Tool = {
   execute: async ({ lider_id }) => {
     const lider = await prisma.user.findUnique({
       where: { id: lider_id as number },
-      select: { name: true, lastName: true },
-    })
-    const afiliados = await prisma.person.findMany({
-      where: { leaderUserId: lider_id as number },
       select: {
-        id: true,
         name: true,
         lastName: true,
-        cedula: true,
-        phone: true,
-        community: { select: { name: true } },
+        persons: {
+          select: {
+            id: true,
+            name: true,
+            lastName: true,
+            cedula: true,
+            phone: true,
+            community: { select: { name: true } },
+          },
+        },
       },
     })
-    return { lider, total: afiliados.length, afiliados }
+
+    if (!lider) {
+      return { error: 'Líder no encontrado' }
+    }
+
+    return {
+      lider: { name: lider.name, lastName: lider.lastName },
+      total: lider.persons.length,
+      afiliados: lider.persons,
+    }
   },
 }
 
@@ -123,11 +147,18 @@ export const listarPersonas: Tool = {
     const limite = (args.limite as number | undefined) ?? 10
     const pagina = (args.pagina as number | undefined) ?? 1
     const skip = (pagina - 1) * limite
+
     const [personas, total] = await Promise.all([
       prisma.person.findMany({
         skip,
         take: limite,
-        include: {
+        select: {
+          id: true,
+          name: true,
+          lastName: true,
+          cedula: true,
+          phone: true,
+          email: true,
           community: { select: { name: true } },
           leader: { select: { name: true, lastName: true } },
         },
@@ -135,6 +166,7 @@ export const listarPersonas: Tool = {
       }),
       prisma.person.count(),
     ])
+
     return { personas, total, pagina, totalPaginas: Math.ceil(total / limite) }
   },
 }
@@ -166,23 +198,31 @@ export const actualizarPersona: Tool = {
       return { success: false, error: 'No se proporcionaron datos para actualizar' }
     }
 
-    try {
-      const persona = await prisma.person.update({
-        where: { id: args.id as number },
-        data: updateData,
-        include: {
-          community: { select: { name: true } },
-          leader: { select: { name: true, lastName: true } },
-        },
-      })
-      return { success: true, persona }
-    } catch {
+    const persona = await prisma.person.update({
+      where: { id: args.id as number },
+      data: updateData,
+      select: {
+        id: true,
+        name: true,
+        lastName: true,
+        cedula: true,
+        phone: true,
+        email: true,
+        community: { select: { name: true } },
+        leader: { select: { name: true, lastName: true } },
+      },
+    }).catch(() => null)
+
+    if (!persona) {
       return { success: false, error: 'Persona no encontrada' }
     }
+
+    return { success: true, persona }
   },
 }
 
 // Eliminar persona
+// OPTIMIZADO: una sola query (delete devuelve el registro eliminado en Prisma)
 export const eliminarPersona: Tool = {
   name: 'eliminar_persona',
   description: 'Eliminar una persona del sistema',
@@ -190,27 +230,24 @@ export const eliminarPersona: Tool = {
     id: z.number().describe('ID de la persona a eliminar'),
   }),
   execute: async ({ id }) => {
-    const persona = await prisma.person.findUnique({
+    const persona = await prisma.person.delete({
       where: { id: id as number },
       select: { name: true, lastName: true, cedula: true },
-    })
+    }).catch(() => null)
 
     if (!persona) {
       return { success: false, error: 'Persona no encontrada' }
     }
 
-    await prisma.person.delete({
-      where: { id: id as number },
-    })
-
     return {
       success: true,
-      message: `Persona ${persona.name} ${persona.lastName} (Cédula: ${persona.cedula}) eliminada correctamente`
+      message: `Persona ${persona.name} ${persona.lastName} (Cédula: ${persona.cedula}) eliminada correctamente`,
     }
   },
 }
 
 // Asignar líder a persona
+// OPTIMIZADO: de 3 queries (findUnique + findUnique + update) a 1 query con manejo de errores P2025
 export const asignarLider: Tool = {
   name: 'asignar_lider',
   description: 'Asignar o cambiar el líder de una persona',
@@ -219,35 +256,31 @@ export const asignarLider: Tool = {
     lider_id: z.number().describe('ID del usuario líder'),
   }),
   execute: async ({ persona_id, lider_id }) => {
-    // Verificar que la persona existe
-    const persona = await prisma.person.findUnique({
-      where: { id: persona_id as number },
-    })
-
-    if (!persona) {
-      return { success: false, error: 'Persona no encontrada' }
-    }
-
-    // Verificar que el líder existe
-    const lider = await prisma.user.findUnique({
-      where: { id: lider_id as number },
-      include: { role: { select: { name: true } } },
-    })
-
-    if (!lider) {
-      return { success: false, error: 'Líder no encontrado' }
-    }
-
-    // Actualizar la persona
     const personaActualizada = await prisma.person.update({
       where: { id: persona_id as number },
       data: { leaderUserId: lider_id as number },
-      include: {
+      select: {
+        name: true,
+        lastName: true,
         community: { select: { name: true } },
-        leader: { select: { name: true, lastName: true } },
+        leader: {
+          select: {
+            name: true,
+            lastName: true,
+            role: { select: { name: true } },
+          },
+        },
       },
+    }).catch((e: { code?: string }) => {
+      if (e.code === 'P2025') return null
+      throw e
     })
 
+    if (!personaActualizada) {
+      return { success: false, error: 'Persona o líder no encontrado' }
+    }
+
+    const lider = personaActualizada.leader!
     return {
       success: true,
       message: `Se asignó a ${personaActualizada.name} ${personaActualizada.lastName} al líder ${lider.name} ${lider.lastName} (${lider.role.name})`,
@@ -266,7 +299,13 @@ export const buscarPersonaPorId: Tool = {
   execute: async ({ id }) => {
     const persona = await prisma.person.findUnique({
       where: { id: id as number },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        lastName: true,
+        cedula: true,
+        phone: true,
+        email: true,
         community: { select: { name: true } },
         leader: { select: { name: true, lastName: true } },
         province: { select: { name: true } },

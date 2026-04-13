@@ -1,3 +1,8 @@
+export { personasTools } from './personas'
+export { geografiaTools } from './geografia'
+export { estadisticasTools } from './estadisticas'
+export { usuariosTools } from './usuarios'
+
 import { personasTools } from './personas'
 import { geografiaTools } from './geografia'
 import { estadisticasTools } from './estadisticas'
@@ -10,8 +15,3 @@ export const allTools: Tool[] = [
   ...estadisticasTools,
   ...usuariosTools,
 ]
-
-export { personasTools } from './personas'
-export { geografiaTools } from './geografia'
-export { estadisticasTools } from './estadisticas'
-export { usuariosTools } from './usuarios'
