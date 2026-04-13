@@ -1,37 +1,6 @@
 import { z } from 'zod'
 import { prisma } from '../prisma'
 import { Tool } from '../types'
-import { Timestamp } from 'next/dist/server/lib/cache-handlers/types';
-
-type Role = {
-  id: number;
-  name: string;
-  description?: string | null;
-  _count: {
-    users: number;
-  }
-}
-
-type User = {
-  id: number;
-  name: string;
-  lastName: string;
-  email: string;
-  role: {
-    name: string;
-  };
-  community: number;
-  afiliados: number;
-  createdAt: Timestamp
-};
-
-type Community = {
-  communityId?: number | null;
-  _count: {
-    id: number;
-  }
-}
-
 
 // Buscar usuario por nombre o email
 export const buscarUsuario: Tool = {
@@ -50,19 +19,25 @@ export const buscarUsuario: Tool = {
         ],
       },
       take: 10,
-      include: {
+      select: {
+        id: true,
+        name: true,
+        lastName: true,
+        email: true,
         role: { select: { name: true } },
         community: { select: { name: true } },
         _count: { select: { persons: true } },
       },
     })
-    return results.map((u: any) => ({
+
+    // Tipos inferidos desde Prisma — sin `any`
+    return results.map((u) => ({
       id: u.id,
       name: u.name,
       lastName: u.lastName,
       email: u.email,
       role: u.role.name,
-      community: u.community?.name,
+      community: u.community?.name ?? null,
       afiliados: u._count.persons,
     }))
   },
@@ -82,16 +57,19 @@ export const listarUsuarios: Tool = {
     const pagina = (args.pagina as number | undefined) ?? 1
     const skip = (pagina - 1) * limite
 
-    const where = args.rol
-      ? { role: { name: args.rol as string } }
-      : {}
+    const where = args.rol ? { role: { name: args.rol as string } } : {}
 
     const [usuarios, total] = await Promise.all([
       prisma.user.findMany({
         where,
         skip,
         take: limite,
-        include: {
+        select: {
+          id: true,
+          name: true,
+          lastName: true,
+          email: true,
+          createdAt: true,
           role: { select: { name: true } },
           community: { select: { name: true } },
           _count: { select: { persons: true } },
@@ -102,13 +80,13 @@ export const listarUsuarios: Tool = {
     ])
 
     return {
-      usuarios: usuarios.map((u: any) => ({
+      usuarios: usuarios.map((u) => ({
         id: u.id,
         name: u.name,
         lastName: u.lastName,
         email: u.email,
         role: u.role.name,
-        community: u.community?.name,
+        community: u.community?.name ?? null,
         afiliados: u._count.persons,
         createdAt: u.createdAt,
       })),
@@ -129,7 +107,14 @@ export const usuarioPorId: Tool = {
   execute: async ({ id }) => {
     const usuario = await prisma.user.findUnique({
       where: { id: id as number },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        lastName: true,
+        email: true,
+        phone: true,
+        createdAt: true,
+        lastLogin: true,
         role: { select: { name: true, description: true } },
         community: { select: { name: true } },
         province: { select: { name: true } },
@@ -152,10 +137,10 @@ export const usuarioPorId: Tool = {
         email: usuario.email,
         phone: usuario.phone,
         role: usuario.role,
-        community: usuario.community?.name,
-        province: usuario.province?.name,
-        district: usuario.district?.name,
-        corregimiento: usuario.corregimiento?.name,
+        community: usuario.community?.name ?? null,
+        province: usuario.province?.name ?? null,
+        district: usuario.district?.name ?? null,
+        corregimiento: usuario.corregimiento?.name ?? null,
         afiliados: usuario._count.persons,
         createdAt: usuario.createdAt,
         lastLogin: usuario.lastLogin,
@@ -165,6 +150,7 @@ export const usuarioPorId: Tool = {
 }
 
 // Estadísticas por usuario
+// OPTIMIZADO: de 2 queries (groupBy + findMany) a 1 query con _count filtrado
 export const estadisticasUsuario: Tool = {
   name: 'estadisticas_usuario',
   description: 'Obtener estadísticas detalladas de un usuario específico',
@@ -174,7 +160,10 @@ export const estadisticasUsuario: Tool = {
   execute: async ({ usuario_id }) => {
     const usuario = await prisma.user.findUnique({
       where: { id: usuario_id as number },
-      include: {
+      select: {
+        id: true,
+        name: true,
+        lastName: true,
         role: { select: { name: true } },
         _count: { select: { persons: true } },
       },
@@ -184,25 +173,21 @@ export const estadisticasUsuario: Tool = {
       return { success: false, error: 'Usuario no encontrado' }
     }
 
-    // Obtener distribución geográfica de afiliados
-    const afiliadosPorComunidad = await prisma.person.groupBy({
-      by: ['communityId'],
-      where: { leaderUserId: usuario_id as number },
-      _count: { id: true },
-    })
-
+    // Distribución geográfica: 1 query en lugar de groupBy + findMany
     const comunidades = await prisma.community.findMany({
-      where: { id: { in: afiliadosPorComunidad.map((a: Community) => a.communityId).filter((id: any): id is number => id !== null) } },
-      select: { id: true, name: true },
+      where: { persons: { some: { leaderUserId: usuario_id as number } } },
+      select: {
+        name: true,
+        _count: {
+          select: { persons: { where: { leaderUserId: usuario_id as number } } },
+        },
+      },
     })
 
-    const distribucion = afiliadosPorComunidad.map((a: Community) => {
-      const comunidad = comunidades.find((c: any) => c.id === a.communityId)
-      return {
-        comunidad: comunidad?.name ?? 'Sin comunidad',
-        cantidad: a._count.id,
-      }
-    })
+    const distribucion = comunidades.map((c) => ({
+      comunidad: c.name,
+      cantidad: c._count.persons,
+    }))
 
     return {
       usuario: {
@@ -223,12 +208,16 @@ export const listarRoles: Tool = {
   parameters: z.object({}),
   execute: async () => {
     const roles = await prisma.role.findMany({
-      include: {
+      select: {
+        id: true,
+        name: true,
+        description: true,
         _count: { select: { users: true } },
       },
       orderBy: { name: 'asc' },
     })
-    return roles.map((r: Role) => ({
+
+    return roles.map((r) => ({
       id: r.id,
       name: r.name,
       description: r.description,

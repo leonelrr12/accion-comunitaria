@@ -14,23 +14,23 @@ export const totalPersonas: Tool = {
 }
 
 // Personas por provincia
+// OPTIMIZADO: de 2 queries (groupBy + findMany) a 1 query con _count
 export const personasPorProvincia: Tool = {
   name: 'personas_por_provincia',
   description: 'Obtener cantidad de personas agrupadas por provincia',
   parameters: z.object({}),
   execute: async () => {
-    const resultado = await prisma.person.groupBy({
-      by: ['provinceId'],
-      _count: { id: true },
-    })
-
     const provincias = await prisma.province.findMany({
-      where: { id: { in: resultado.map((r: { provinceId: number | null }) => r.provinceId).filter((id: number | null): id is number => id !== null) } },
+      select: {
+        name: true,
+        _count: { select: { persons: true } },
+      },
+      orderBy: { name: 'asc' },
     })
 
-    return resultado.map((r: { provinceId: number | null; _count: { id: number } }) => ({
-      provincia: provincias.find((p: { id: number }) => p.id === r.provinceId)?.name ?? 'Sin provincia',
-      total: r._count.id,
+    return provincias.map((p) => ({
+      provincia: p.name,
+      total: p._count.persons,
     }))
   },
 }
@@ -46,7 +46,10 @@ export const rankingLideres: Tool = {
     const limite = (args.limite as number | undefined) ?? 10
     const resultado = await prisma.user.findMany({
       take: limite,
-      include: {
+      select: {
+        id: true,
+        name: true,
+        lastName: true,
         role: { select: { name: true } },
         _count: { select: { persons: true } },
       },
@@ -55,7 +58,7 @@ export const rankingLideres: Tool = {
       },
     })
 
-    return resultado.map((user: { id: number; name: string; lastName: string; role: { name: string }; _count: { persons: number } }) => ({
+    return resultado.map((user) => ({
       id: user.id,
       nombre: `${user.name} ${user.lastName}`,
       rol: user.role.name,
@@ -98,6 +101,7 @@ export const estadisticasGenerales: Tool = {
 }
 
 // Personas por distrito
+// OPTIMIZADO: de 2 queries (count + findUnique) a 1 query con _count
 export const personasPorDistrito: Tool = {
   name: 'personas_por_distrito',
   description: 'Obtener cantidad de personas en un distrito específico',
@@ -105,17 +109,23 @@ export const personasPorDistrito: Tool = {
     distrito_id: z.number().describe('ID del distrito'),
   }),
   execute: async ({ distrito_id }) => {
-    const count = await prisma.person.count({
-      where: { districtId: distrito_id as number },
-    })
     const distrito = await prisma.district.findUnique({
       where: { id: distrito_id as number },
-      include: { province: true },
+      select: {
+        name: true,
+        province: { select: { name: true } },
+        _count: { select: { persons: true } },
+      },
     })
+
+    if (!distrito) {
+      return { error: 'Distrito no encontrado' }
+    }
+
     return {
-      distrito: distrito?.name,
-      provincia: distrito?.province.name,
-      total: count,
+      distrito: distrito.name,
+      provincia: distrito.province.name,
+      total: distrito._count.persons,
     }
   },
 }
