@@ -1,5 +1,20 @@
 # HTTPS
 
+# Backup y Restore
+
+````bash
+
+# Exportar la base de datos a un archivo
+docker exec -t nombre_del_contenedor_db pg_dumpall -U tu_usuario > backup_db_comuna.sql
+
+
+cat ~/backups/db_comuna/archivo_elegido.sql | docker exec -i db_comuna psql -U postgres
+
+Tip: Puedes mover este archivo a tu PC local usando scp desde tu terminal local:
+scp leonelr@147.93.145.67:~/backup_db_comuna.sql ./ruta/en/tu/pc
+
+
+
 ```bash
 Solo un último consejo de "buen compañero":
 Si en el futuro decides ponerle un dominio y activar el SSL (HTTPS) con Certbot, recuerda volver a cambiar secure: true y useSecureCookies: true. Esto protegerá la sesión de tus usuarios para que no pueda ser interceptada.
@@ -8,7 +23,7 @@ Si en el futuro decides ponerle un dominio y activar el SSL (HTTPS) con Certbot,
 ln: 113 auth.ts
           secure: false, //process.env.NODE_ENV === "production",
 
-```
+````
 
 # NGINX
 
@@ -26,6 +41,9 @@ WITH ENCODING 'UTF8'
 docker exec -it tu_contenedor pg_dump -U postgres -Fc db_comuna > db_comuna_backup_$(date +%Y%m%d).dump
 docker exec -i tu_contenedor pg_restore -U postgres -d db_comuna db_comuna_backup_xxxx.dump
 
+
+ALTER USER postgres WITH PASSWORD 'tu_nueva_contraseña_segura';
+admin1204
 
 
 Si usas PM2: pm2 logs
