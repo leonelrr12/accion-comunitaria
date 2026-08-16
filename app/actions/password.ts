@@ -3,7 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import bcrypt from "bcryptjs";
 import { createHash, randomBytes } from "crypto";
-import { headers } from "next/headers";
+import { cookies, headers } from "next/headers";
 import { checkRateLimit, getClientIp } from "@/lib/rateLimit";
 import { sendEmail } from "@/lib/mailer";
 
@@ -115,6 +115,10 @@ export async function resetPasswordAction(token: string, password: string) {
       data: { usedAt: new Date() },
     }),
   ]);
+
+  // Invalidar la sesión actual: tras un restablecimiento se debe volver a
+  // iniciar sesión con la contraseña nueva (las cookies viejas no sobreviven)
+  ;(await cookies()).delete("session")
 
   return { success: true };
 }
