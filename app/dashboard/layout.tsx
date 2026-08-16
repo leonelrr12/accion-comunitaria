@@ -18,11 +18,13 @@ function SidebarContent({
     navigation,
     currentUser,
     onLogout,
+    onNavigate,
     pathname
 }: {
     navigation: NavItem[];
     currentUser: { name: string; lastName: string };
     onLogout: () => void;
+    onNavigate?: () => void;
     pathname: string;
 }) {
     return (
@@ -40,6 +42,7 @@ function SidebarContent({
                         <Link
                             key={item.name}
                             href={item.href}
+                            onClick={onNavigate}
                             className={`flex items-center justify-between px-3 py-2.5 text-sm font-semibold rounded-xl transition-all duration-200 group ${
                                 isActive 
                                     ? "bg-blue-50 text-blue-600 shadow-sm shadow-blue-100/50" 
@@ -159,6 +162,7 @@ export default function DashboardLayout({
                             navigation={navigation} 
                             currentUser={currentUser} 
                             onLogout={handleLogout}
+                            onNavigate={() => setIsMobileMenuOpen(false)}
                             pathname={pathname}
                         />
                     </aside>
