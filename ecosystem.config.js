@@ -10,7 +10,7 @@ module.exports = {
       max_memory_restart: "800M", // Reinicia si usa mucha memoria
       env: {
         NODE_ENV: "production",
-        PORT: 3000,
+        PORT: 3006,
       },
       // Opcional: logs más limpios
       log_date_format: "YYYY-MM-DD HH:mm:ss",

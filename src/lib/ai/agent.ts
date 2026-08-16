@@ -1,4 +1,3 @@
-import ollama from 'ollama'
 import { z } from 'zod'
 import { Tool, ToolDefinition, ChatMessage, AgentResponse } from './types'
 import { allTools } from './tools'
@@ -9,7 +8,7 @@ const log = process.env.DEBUG_AGENT === 'true'
   ? (...args: unknown[]) => console.log(...args)
   : () => {}
 
-// ─── Conversión de tools a formato Ollama ────────────────────────────────────
+// ─── Conversión de tools a formato OpenAI (compatible DeepSeek) ──────────────
 //
 // Compatible con Zod v4, donde las clases internas (ZodOptional, ZodDefault,
 // etc.) ya no se exportan y _def.innerType no existe.
@@ -62,7 +61,7 @@ function extractDescription(schema: z.ZodTypeAny): string | undefined {
   return raw.description ?? unwrapDef(raw).description
 }
 
-function toolsToOllamaFormat(tools: Tool[]): ToolDefinition[] {
+function toolsToOpenAIFormat(tools: Tool[]): ToolDefinition[] {
   return tools.map(tool => {
     const shape = tool.parameters.shape as Record<string, z.ZodTypeAny>
 
@@ -375,6 +374,74 @@ function defaultFormatter(name: string, result: unknown): string[] {
   return [`📋 Resultado de ${name}:\n${JSON.stringify(result, null, 2)}`]
 }
 
+// ─── Cliente API DeepSeek (formato compatible OpenAI) ─────────────────────────
+
+const DEEPSEEK_BASE_URL = process.env.DEEPSEEK_BASE_URL || 'https://api.deepseek.com'
+const DEEPSEEK_TIMEOUT_MS = 120_000
+
+function deepSeekHeaders(): Record<string, string> {
+  const apiKey = process.env.DEEPSEEK_API_KEY
+  if (!apiKey) {
+    throw new Error('DEEPSEEK_API_KEY no está definida en el entorno')
+  }
+  return {
+    'Content-Type': 'application/json',
+    'Authorization': `Bearer ${apiKey}`,
+  }
+}
+
+// DeepSeek (OpenAI) devuelve tool_calls con arguments como string JSON.
+// En streaming los argumentos llegan fragmentados y hay que acumularlos.
+function normalizeToolCalls(
+  toolCalls: Array<{ function: { name: string; arguments: string | Record<string, unknown> } }>
+): Array<{ function: { name: string; arguments: Record<string, unknown> } }> {
+  return toolCalls.map(tc => {
+    let args: Record<string, unknown> = {}
+    if (typeof tc.function.arguments === 'string') {
+      try {
+        args = JSON.parse(tc.function.arguments) as Record<string, unknown>
+      } catch {
+        args = {}
+      }
+    } else if (tc.function.arguments && typeof tc.function.arguments === 'object') {
+      args = tc.function.arguments as Record<string, unknown>
+    }
+    return { function: { name: tc.function.name, arguments: args } }
+  })
+}
+
+// Parser SSE para el streaming de DeepSeek (líneas "data: {...}" hasta "[DONE]")
+async function* deepSeekStream(body: ReadableStream<Uint8Array>): AsyncGenerator<any> {
+  const reader = body.getReader()
+  const decoder = new TextDecoder()
+  let buffer = ''
+
+  try {
+    while (true) {
+      const { done, value } = await reader.read()
+      if (done) break
+      buffer += decoder.decode(value, { stream: true })
+
+      const lines = buffer.split('\n')
+      buffer = lines.pop() ?? ''
+
+      for (const line of lines) {
+        const trimmed = line.trim()
+        if (!trimmed.startsWith('data:')) continue
+        const data = trimmed.slice(5).trim()
+        if (data === '[DONE]') return
+        try {
+          yield JSON.parse(data)
+        } catch {
+          // Ignorar chunks no JSON (pings, etc.)
+        }
+      }
+    }
+  } finally {
+    reader.releaseLock()
+  }
+}
+
 // ─── Clase Agent ──────────────────────────────────────────────────────────────
 
 export class Agent {
@@ -383,12 +450,11 @@ export class Agent {
   private toolDefinitions: ToolDefinition[]
   private systemPrompt: string
 
-  // qwen2.5:1.5b → modelo ligero para desarrollo
-  // qwen2.5       → modelo completo para producción
-  constructor(model: string = 'qwen2.5', tools: Tool[] = allTools) {
+  // deepseek-chat → modelo por defecto de la API de DeepSeek (configurable)
+  constructor(model: string = process.env.DEEPSEEK_MODEL || 'deepseek-chat', tools: Tool[] = allTools) {
     this.model = model
     this.tools = tools
-    this.toolDefinitions = toolsToOllamaFormat(tools)
+    this.toolDefinitions = toolsToOpenAIFormat(tools)
     // FIX: system prompt generado dinámicamente desde las tools registradas
     this.systemPrompt = buildSystemPrompt(tools)
   }
@@ -479,23 +545,49 @@ export class Agent {
   ): Promise<AgentResponse> {
     log('[Agent] Iniciando chat. Modelo:', this.model, '| Tools:', this.toolDefinitions.length)
 
-    const response = await ollama.chat({
-      model: this.model,
-      messages: [
-        { role: 'system', content: this.systemPrompt },
-        ...messages,
-      ],
-      tools: this.toolDefinitions,
-    })
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), DEEPSEEK_TIMEOUT_MS)
 
-    log('[Agent] Respuesta de Ollama recibida')
+    let response: any
+    try {
+      const res = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
+        method: 'POST',
+        headers: deepSeekHeaders(),
+        body: JSON.stringify({
+          model: this.model,
+          messages: [
+            { role: 'system', content: this.systemPrompt },
+            ...messages,
+          ],
+          tools: this.toolDefinitions,
+        }),
+        signal: controller.signal,
+      })
 
-    const message = response.message
+      if (!res.ok) {
+        const errText = await res.text().catch(() => '')
+        throw new Error(`DeepSeek API error ${res.status}: ${errText}`)
+      }
+
+      response = await res.json()
+    } finally {
+      clearTimeout(timeout)
+    }
+
+    log('[Agent] Respuesta de DeepSeek recibida')
+
+    const message = response.choices?.[0]?.message
+    if (!message) {
+      throw new Error('Respuesta inesperada de DeepSeek (sin message)')
+    }
 
     if (message.tool_calls && message.tool_calls.length > 0) {
       log(`[Agent] Tool calls detectados: ${message.tool_calls.length}`)
 
-      const toolCallsResults = await this.executeToolCalls(message.tool_calls, onToolCall)
+      const toolCallsResults = await this.executeToolCalls(
+        normalizeToolCalls(message.tool_calls),
+        onToolCall
+      )
 
       const responseMessage = [
         message.content || '',
@@ -505,40 +597,73 @@ export class Agent {
       return { message: responseMessage, toolCalls: toolCallsResults }
     }
 
-    return { message: message.content }
+    return { message: message.content ?? '' }
   }
 
   // ── streamChat() — respuesta en tiempo real ────────────────────────────────
   //
   // FIX: Ahora maneja tool calls correctamente.
-  // Ollama acumula los tool calls en el chunk final (done=true).
-  // Se detectan, ejecutan y el resultado se emite como yield al final del stream.
+  // DeepSeek entrega los tool calls fragmentados por chunks (uno por índice),
+  // y se ejecutan cuando finish_reason = "tool_calls". El resultado se emite
+  // como yield al final del stream.
 
   async *streamChat(
     messages: ChatMessage[],
     onToolCall?: (name: string, args: Record<string, unknown>) => void
   ): AsyncGenerator<string> {
-    const stream = await ollama.chat({
-      model: this.model,
-      messages: [
-        { role: 'system', content: this.systemPrompt },
-        ...messages,
-      ],
-      tools: this.toolDefinitions,
-      stream: true,
+    const res = await fetch(`${DEEPSEEK_BASE_URL}/chat/completions`, {
+      method: 'POST',
+      headers: deepSeekHeaders(),
+      body: JSON.stringify({
+        model: this.model,
+        messages: [
+          { role: 'system', content: this.systemPrompt },
+          ...messages,
+        ],
+        tools: this.toolDefinitions,
+        stream: true,
+      }),
     })
 
-    for await (const chunk of stream) {
+    if (!res.ok || !res.body) {
+      const errText = await res.text().catch(() => '')
+      throw new Error(`DeepSeek API error ${res.status}: ${errText}`)
+    }
+
+    // Acumular tool calls por índice (name y arguments llegan en fragmentos)
+    const toolCalls: Record<number, { name: string; args: string }> = {}
+
+    for await (const chunk of deepSeekStream(res.body)) {
+      const choice = chunk.choices?.[0]
+      const delta = choice?.delta
+
       // Emitir texto de respuesta a medida que llega
-      if (chunk.message.content) {
-        yield chunk.message.content
+      if (delta?.content) {
+        yield delta.content
       }
 
-      // FIX: manejar tool calls en el chunk final
-      if (chunk.done && chunk.message.tool_calls && chunk.message.tool_calls.length > 0) {
-        log(`[Agent] Stream: tool calls detectados en chunk final: ${chunk.message.tool_calls.length}`)
+      // Acumular fragmentos de tool calls
+      if (delta?.tool_calls) {
+        for (const tc of delta.tool_calls) {
+          const index = tc.index ?? 0
+          toolCalls[index] ??= { name: '', args: '' }
+          if (tc.function?.name) toolCalls[index].name += tc.function.name
+          if (tc.function?.arguments) toolCalls[index].args += tc.function.arguments
+        }
+      }
 
-        const toolCallsResults = await this.executeToolCalls(chunk.message.tool_calls, onToolCall)
+      // Al terminar el turno con tool calls, ejecutarlos y devolver resultados
+      if (choice?.finish_reason === 'tool_calls' && Object.keys(toolCalls).length > 0) {
+        log(`[Agent] Stream: tool calls detectados: ${Object.keys(toolCalls).length}`)
+
+        const completedCalls = Object.values(toolCalls).map(tc => ({
+          function: { name: tc.name, arguments: tc.args },
+        }))
+
+        const toolCallsResults = await this.executeToolCalls(
+          normalizeToolCalls(completedCalls),
+          onToolCall
+        )
 
         if (toolCallsResults.length > 0) {
           yield '\n\n' + this.formatToolResults(toolCallsResults)

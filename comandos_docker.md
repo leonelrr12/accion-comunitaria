@@ -43,7 +43,6 @@ docker exec -i tu_contenedor pg_restore -U postgres -d db_comuna db_comuna_backu
 
 
 ALTER USER postgres WITH PASSWORD 'tu_nueva_contraseña_segura';
-admin1204
 
 
 Si usas PM2: pm2 logs

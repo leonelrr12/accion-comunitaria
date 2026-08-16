@@ -89,7 +89,7 @@ export default function AsistentePage() {
             setMessages((prev) => [...prev, assistantMessage]);
         } catch (err) {
             console.error("Chat error:", err);
-            setError(err instanceof Error ? err.message : "No se pudo conectar con el asistente. Verifica que Ollama esté ejecutándose.");
+            setError(err instanceof Error ? err.message : "No se pudo conectar con el asistente. Verifica la conexión con el servicio de IA.");
         } finally {
             setIsLoading(false);
         }
@@ -112,7 +112,7 @@ export default function AsistentePage() {
                     </div>
                     <div>
                         <h1 className="text-xl font-bold text-slate-900">Asistente Administrativo</h1>
-                        <p className="text-sm text-slate-500">Powered by AI - Ollama + Qwen2.5</p>
+                        <p className="text-sm text-slate-500">Powered by AI - DeepSeek</p>
                     </div>
                 </div>
             </div>
