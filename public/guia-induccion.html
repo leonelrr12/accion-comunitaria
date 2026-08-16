@@ -1,0 +1,318 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Guía de Inducción — Acción Comunitaria</title>
+<style>
+  /* ── Tokens ───────────────────────────────────────────── */
+  :root {
+    --paper: #F7F9FC;
+    --ink: #0E1B2E;
+    --muted: #5B6B84;
+    --line: #DFE6F0;
+    --accent: #1E4ED8;
+    --accent-deep: #4338CA;
+    --accent-soft: #E7EDFB;
+    --warm: #B45309;
+    --warm-soft: #FBF3E4;
+    --good: #0E7A4D;
+    --good-soft: #E5F5EC;
+    --card: #FFFFFF;
+    --chain: #B9C6DC;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --paper: #0B1220;
+      --ink: #E6ECF7;
+      --muted: #93A3BC;
+      --line: #22304A;
+      --accent: #6E95F5;
+      --accent-deep: #8FA6F7;
+      --accent-soft: #16233F;
+      --warm: #E3A14F;
+      --warm-soft: #2A2110;
+      --good: #4FC08B;
+      --good-soft: #0F2A1E;
+      --card: #101A2C;
+      --chain: #41567A;
+    }
+  }
+  :root[data-theme="dark"] {
+    --paper: #0B1220;
+    --ink: #E6ECF7;
+    --muted: #93A3BC;
+    --line: #22304A;
+    --accent: #6E95F5;
+    --accent-deep: #8FA6F7;
+    --accent-soft: #16233F;
+    --warm: #E3A14F;
+    --warm-soft: #2A2110;
+    --good: #4FC08B;
+    --good-soft: #0F2A1E;
+    --card: #101A2C;
+    --chain: #41567A;
+  }
+
+  /* ── Base ─────────────────────────────────────────────── */
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { -webkit-text-size-adjust: 100%; }
+  body {
+    background: var(--paper);
+    color: var(--ink);
+    font-family: -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    font-size: 15.5px;
+    line-height: 1.6;
+    padding: 48px 20px 72px;
+  }
+  .sheet {
+    max-width: 780px;
+    margin: 0 auto;
+  }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 4px; }
+
+  /* ── Masthead ─────────────────────────────────────────── */
+  .masthead { border-bottom: 3px solid var(--accent); padding-bottom: 22px; margin-bottom: 30px; }
+  .kicker {
+    font-size: 11.5px; font-weight: 700; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--accent); margin-bottom: 10px;
+  }
+  h1 {
+    font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+    font-size: 40px; line-height: 1.08; font-weight: 700;
+    text-wrap: balance; letter-spacing: -0.01em;
+  }
+  .lede { color: var(--muted); margin-top: 10px; max-width: 60ch; }
+  .chain {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 6px;
+    margin-top: 18px; font-size: 12.5px; font-weight: 600; color: var(--muted);
+  }
+  .chain b { color: var(--ink); background: var(--accent-soft); border: 1px solid var(--line); padding: 4px 10px; border-radius: 6px; font-weight: 700; }
+  .chain .arrow { color: var(--chain); font-weight: 400; }
+
+  /* ── Secciones ────────────────────────────────────────── */
+  section { margin-bottom: 34px; }
+  h2 {
+    font-family: "Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif;
+    font-size: 24px; line-height: 1.15; text-wrap: balance; margin-bottom: 4px;
+  }
+  .sec-head { display: flex; align-items: baseline; gap: 10px; border-left: 4px solid var(--accent); padding-left: 12px; margin-bottom: 14px; }
+  .sec-head .no {
+    font-size: 12px; font-weight: 800; letter-spacing: 0.1em; color: var(--accent);
+    font-variant-numeric: tabular-nums;
+  }
+  p.lead { color: var(--muted); max-width: 64ch; margin-bottom: 14px; }
+  ul, ol { padding-left: 22px; margin-bottom: 12px; }
+  li { margin-bottom: 5px; }
+  strong { font-weight: 700; }
+  code {
+    font-family: ui-monospace, "Cascadia Mono", "SF Mono", Menlo, Consolas, monospace;
+    font-size: 0.86em; background: var(--accent-soft); color: var(--accent-deep);
+    padding: 1px 6px; border-radius: 5px;
+  }
+
+  /* ── Tablas ───────────────────────────────────────────── */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); border-radius: 10px; margin-bottom: 14px; }
+  table { width: 100%; border-collapse: collapse; font-size: 14px; min-width: 540px; }
+  th {
+    text-align: left; font-size: 11.5px; text-transform: uppercase; letter-spacing: 0.09em;
+    color: var(--muted); font-weight: 700; padding: 10px 14px;
+    border-bottom: 2px solid var(--line); background: var(--card);
+  }
+  td { padding: 10px 14px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  tr:last-child td { border-bottom: none; }
+  tbody tr:nth-child(even) td { background: var(--card); }
+  td .role-tag {
+    display: inline-block; font-size: 11.5px; font-weight: 700;
+    background: var(--accent-soft); color: var(--accent-deep);
+    padding: 2px 9px; border-radius: 999px; white-space: nowrap;
+  }
+
+  /* ── Cajas ────────────────────────────────────────────── */
+  .callout { border-radius: 10px; padding: 14px 18px; margin: 14px 0; font-size: 14.5px; }
+  .callout .tag { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; display: block; margin-bottom: 5px; }
+  .callout.tip { background: var(--warm-soft); border: 1px solid var(--warm); }
+  .callout.tip .tag { color: var(--warm); }
+  .callout.demo { background: var(--accent-soft); border: 1px solid var(--accent); }
+  .callout.demo .tag { color: var(--accent); }
+  .callout.ok { background: var(--good-soft); border: 1px solid var(--good); }
+  .callout.ok .tag { color: var(--good); }
+  .callout p { margin: 4px 0; }
+  .callout ul { margin: 6px 0 2px; }
+
+  /* ── Agenda (secuencia real → numerada) ───────────────── */
+  .agenda { display: flex; flex-direction: column; gap: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .agenda-item { display: grid; grid-template-columns: 84px 1fr; gap: 0; border-bottom: 1px solid var(--line); background: var(--card); }
+  .agenda-item:last-child { border-bottom: none; }
+  .agenda-time {
+    padding: 14px; font-size: 12.5px; font-weight: 800; color: var(--accent);
+    background: var(--accent-soft); font-variant-numeric: tabular-nums;
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .agenda-body { padding: 14px 16px; }
+  .agenda-body h3 { font-size: 16px; font-weight: 700; margin-bottom: 3px; }
+  .agenda-body p { font-size: 13.5px; color: var(--muted); }
+
+  /* ── Flujos ───────────────────────────────────────────── */
+  .flow { border: 1px solid var(--line); border-radius: 12px; background: var(--card); padding: 16px 18px; margin-bottom: 14px; }
+  .flow h3 { font-size: 15.5px; margin-bottom: 8px; }
+  .flow ol { margin-bottom: 4px; }
+  .flow li { font-size: 14px; }
+
+  /* ── Footer ───────────────────────────────────────────── */
+  .foot {
+    margin-top: 42px; padding-top: 16px; border-top: 1px solid var(--line);
+    display: flex; flex-wrap: wrap; justify-content: space-between; gap: 8px;
+    font-size: 12.5px; color: var(--muted);
+  }
+  .foot b { color: var(--ink); }
+
+  /* ── Impresión ────────────────────────────────────────── */
+  @media print {
+    body { padding: 0; font-size: 12pt; }
+    .sheet { max-width: 100%; }
+    section { break-inside: avoid; }
+    .agenda-item, .flow, .callout, .table-wrap { break-inside: avoid; }
+    h1 { font-size: 28pt; }
+    h2 { font-size: 16pt; }
+    a { color: inherit; text-decoration: none; }
+  }
+</style>
+</head>
+
+<body>
+  <div class="sheet">
+
+    <header class="masthead">
+      <div class="kicker">Documento de inducción · v1 · agosto 2026</div>
+      <h1>Guía de Inducción — Acción Comunitaria</h1>
+      <p class="lede">Acción Comunitaria organiza a las personas y sus líderes sobre la geografía de Panamá. Esta guía cubre el alcance de la aplicación, los roles, los módulos y los flujos que se demuestran en la inducción.</p>
+      <div class="chain">
+        <b>Provincia</b><span class="arrow">→</span><b>Distrito</b><span class="arrow">→</span><b>Corregimiento</b><span class="arrow">→</span><b>Comunidad</b>
+        <span style="margin-left:4px">— la jerarquía sobre la que trabaja todo el sistema</span>
+      </div>
+    </header>
+
+    <section>
+      <div class="sec-head"><span class="no">01</span><h2>Qué hace la aplicación</h2></div>
+      <p class="lead">Un sistema web para registrar, organizar y consultar a las personas y líderes de las comunidades, con permisos según el rol de cada usuario.</p>
+      <ul>
+        <li><strong>Territorio</strong> — provincias, distritos, corregimientos y comunidades de Panamá precargados.</li>
+        <li><strong>Personas y afiliados</strong> — registro, búsqueda, edición y asignación a un líder.</li>
+        <li><strong>Líderes y jerarquía</strong> — 5 roles con reglas claras de quién puede liderar a quién.</li>
+        <li><strong>Asistente IA</strong> — el administrador consulta y opera la base de datos escribiendo en lenguaje natural.</li>
+        <li><strong>Seguridad</strong> — contraseñas con recuperación por correo, cambio forzado en el primer ingreso y registro de auditoría.</li>
+      </ul>
+    </section>
+
+    <section>
+      <div class="sec-head"><span class="no">02</span><h2>Roles y qué puede hacer cada uno</h2></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Rol</th><th>Puede hacer</th></tr></thead>
+          <tbody>
+            <tr><td><span class="role-tag">ADMIN</span></td><td>Todo: usuarios, roles, geografía, jerarquía, asistente IA, auditoría.</td></tr>
+            <tr><td><span class="role-tag">Líder Regional</span></td><td>Coordina una provincia: sus afiliados y los líderes de su zona.</td></tr>
+            <tr><td><span class="role-tag">Líder de Zona</span></td><td>Coordina un distrito: registra y gestiona afiliados de su zona.</td></tr>
+            <tr><td><span class="role-tag">Comunitario</span></td><td>Líder de corregimiento o comunidad; puede liderar a Activistas.</td></tr>
+            <tr><td><span class="role-tag">Activista</span></td><td>Apoyo en campo; registra afiliados, <em>no</em> puede liderar a nadie.</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div class="callout tip"><span class="tag">Regla de oro</span><p>Un Activista no lidera a nadie, y un Comunitario solo lidera a Activistas. La aplicación valida estas reglas al crear o asignar.</p></div>
+    </section>
+
+    <section>
+      <div class="sec-head"><span class="no">03</span><h2>Módulos de la aplicación</h2></div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Módulo</th><th>Acceso</th><th>Función</th></tr></thead>
+          <tbody>
+            <tr><td><strong>Dashboard</strong></td><td>Todos</td><td>Estadísticas: total de personas, ranking de líderes, personas por provincia y distrito.</td></tr>
+            <tr><td><strong>Afiliados</strong></td><td>Líderes</td><td>Registrar, buscar, ver y editar personas; detalle por afiliado.</td></tr>
+            <tr><td><strong>Nuevo afiliado</strong></td><td>Líderes</td><td>Alta individual con ubicación geográfica.</td></tr>
+            <tr><td><strong>Usuarios y nuevo líder</strong></td><td>ADMIN</td><td>Alta de usuarios; al crearlos llega un correo con enlace para definir la contraseña.</td></tr>
+            <tr><td><strong>Roles</strong></td><td>ADMIN</td><td>Administración de los 5 roles y sus descripciones.</td></tr>
+            <tr><td><strong>Geografía</strong></td><td>ADMIN</td><td>Mapa y ubicaciones: provincias, distritos, corregimientos y comunidades.</td></tr>
+            <tr><td><strong>Jerarquía</strong></td><td>ADMIN</td><td>Árbol de líderes y sus afiliados.</td></tr>
+            <tr><td><strong>Asistente IA</strong></td><td>ADMIN</td><td>Chat en lenguaje natural: consultas y operaciones sobre los datos.</td></tr>
+            <tr><td><strong>Auditoría</strong></td><td>ADMIN</td><td>Historial de acciones: quién creó o modificó qué.</td></tr>
+            <tr><td><strong>Configuración</strong></td><td>Líderes</td><td>Preferencias de la cuenta y perfil.</td></tr>
+            <tr><td><strong>Registro público</strong></td><td>Afiliados</td><td>Auto-registro con el código de invitación del líder (<code>/registro?ref=XXXX</code>).</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-head"><span class="no">04</span><h2>Agenda de la inducción</h2></div>
+      <div class="agenda">
+        <div class="agenda-item">
+          <div class="agenda-time">30 min</div>
+          <div class="agenda-body"><h3>Sesión 1 — Administración</h3><p>Crear usuarios y líderes (demo del correo de bienvenida), roles y jerarquía, geografía y auditoría.</p></div>
+        </div>
+        <div class="agenda-item">
+          <div class="agenda-time">30 min</div>
+          <div class="agenda-body"><h3>Sesión 2 — Líderes</h3><p>Su dashboard, registro de afiliados (manual y con código de invitación), búsqueda y edición de personas.</p></div>
+        </div>
+        <div class="agenda-item">
+          <div class="agenda-time">20 min</div>
+          <div class="agenda-body"><h3>Sesión 3 — Asistente IA</h3><p>Demos en vivo de consultas y operaciones en lenguaje natural (solo ADMIN).</p></div>
+        </div>
+        <div class="agenda-item">
+          <div class="agenda-time">10 min</div>
+          <div class="agenda-body"><h3>Sesión 4 — Seguridad y soporte</h3><p>Recuperación de contraseña, contraseña mínima de 8 caracteres, qué hacer si no llega el correo.</p></div>
+        </div>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-head"><span class="no">05</span><h2>Flujos clave para demostrar</h2></div>
+
+      <div class="flow">
+        <h3>Alta de un nuevo líder (ADMIN)</h3>
+        <ol>
+          <li>El administrador crea el usuario con su rol y correo.</li>
+          <li>El nuevo líder recibe un correo de bienvenida con un enlace válido por 1 hora.</li>
+          <li>Abre el enlace, define su contraseña y entra al sistema.</li>
+          <li>Si el correo no llega, la contraseña temporal <code>123456</code> sigue funcionando y el sistema le pedirá cambiarla al entrar.</li>
+        </ol>
+      </div>
+
+      <div class="flow">
+        <h3>Registro de un afiliado (Líder)</h3>
+        <ol>
+          <li>El líder entra a <strong>Nuevo afiliado</strong> y captura nombre, cédula y ubicación.</li>
+          <li>O comparte su <strong>código de invitación</strong> y el afiliado se auto-registra en <code>/registro?ref=XXXX</code>.</li>
+          <li>El afiliado queda visible en el dashboard y en el detalle del líder.</li>
+        </ol>
+      </div>
+
+      <div class="callout demo"><span class="tag">Demo del asistente IA</span>
+        <p>Frases para probar en vivo (solo ADMIN, módulo Asistente):</p>
+        <ul>
+          <li><em>“¿Cuántas personas hay en la comunidad El Progreso?”</em></li>
+          <li><em>“Registra una persona nueva: Juan Pérez, cédula 8-123-456, en San Miguelito.”</em></li>
+          <li><em>“Actualiza el teléfono de la persona con ID 5 a 8888-9999.”</em></li>
+          <li><em>“Muéstrame los afiliados del líder Juan Pérez.”</em></li>
+        </ul>
+      </div>
+    </section>
+
+    <section>
+      <div class="sec-head"><span class="no">06</span><h2>Seguridad y soporte</h2></div>
+      <ul>
+        <li><strong>Recuperar contraseña</strong> — en la página de inicio de sesión: <em>¿Olvidaste tu contraseña?</em> Envía un enlace válido por 1 hora y de un solo uso.</li>
+        <li><strong>Contraseñas</strong> — mínimo 8 caracteres; el sistema fuerza el cambio en el primer ingreso.</li>
+        <li><strong>Si no llega el correo</strong> — revisar la bandeja de spam; si persiste, contactar al administrador.</li>
+        <li><strong>Regla de oro</strong> — no compartir credenciales; cada líder usa su propia cuenta.</li>
+      </ul>
+      <div class="callout ok"><span class="tag">Acceso</span><p>La aplicación está disponible en <b>https://ac.sosaalcalde.com</b> — cualquier navegador, teléfono o computadora.</p></div>
+    </section>
+
+    <footer class="foot">
+      <span><b>Acción Comunitaria</b> — guía de inducción</span>
+      <span>https://ac.sosaalcalde.com · rev. agosto 2026</span>
+    </footer>
+
+  </div>
+</body>
