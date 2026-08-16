@@ -51,16 +51,11 @@ export async function middleware(request: NextRequest) {
         }
     }
 
-    // Prevent logged-in users from accessing the login page
-    if (pathname.startsWith("/login") && session) {
-        if (session.mustChangePassword) {
-            return NextResponse.redirect(new URL("/cambiar-password", request.url));
-        }
-        if (session.role === "ADMIN") {
-            return NextResponse.redirect(new URL("/admin/dashboard", request.url));
-        }
-        return NextResponse.redirect(new URL("/dashboard", request.url));
-    }
+    // NOTA: se eliminó el rebote de /login para usuarios con sesión.
+    // Las sesiones son estáticas y sobreviven al cambio de contraseña: si un
+    // usuario tenía una cookie vieja, el rebote lo dejaba atrapado sin poder
+    // llegar al formulario. Ahora /login siempre muestra el formulario; la
+    // protección real sigue en las rutas /admin y /dashboard.
 
     return NextResponse.next();
 }

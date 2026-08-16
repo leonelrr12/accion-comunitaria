@@ -4,7 +4,7 @@ import { useAppStore } from "@/lib/store";
 import { useRouter, usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Users, LayoutDashboard, LogOut, Settings, Menu, X, ChevronRight } from "lucide-react";
+import { Users, Users2, LayoutDashboard, LogOut, Settings, Menu, X, ChevronRight } from "lucide-react";
 import { logoutAction } from "../actions/auth";
 import NotificationBell from "../../components/ui/NotificationBell";
 
@@ -119,6 +119,7 @@ export default function DashboardLayout({
     const navigation: NavItem[] = [
         { name: 'Panel Principal', href: '/dashboard', icon: LayoutDashboard },
         { name: 'Gestión de Afiliados', href: '/dashboard/afiliados', icon: Users },
+        { name: 'Gestión de Activistas', href: '/dashboard/activistas', icon: Users2 },
         { name: 'Mi Configuración', href: '/dashboard/configuracion', icon: Settings },
     ];
 

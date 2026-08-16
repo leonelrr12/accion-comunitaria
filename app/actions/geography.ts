@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireAdmin } from "@/lib/auth-guard";
 import { revalidatePath } from "next/cache";
 
 // --- PROVINCES ---
@@ -12,12 +13,14 @@ export async function getProvinces() {
 }
 
 export async function createProvince(name: string) {
+    await requireAdmin();
     const province = await prisma.province.create({ data: { name } });
     revalidatePath("/admin/dashboard/geografia");
     return province;
 }
 
 export async function deleteProvince(id: number) {
+    await requireAdmin();
     await prisma.province.delete({ where: { id } });
     revalidatePath("/admin/dashboard/geografia");
 }
@@ -32,6 +35,7 @@ export async function getDistricts(provinceId?: number) {
 }
 
 export async function createDistrict(provinceId: number, name: string) {
+    await requireAdmin();
     const district = await prisma.district.create({
         data: { name, provinceId }
     });
@@ -49,6 +53,7 @@ export async function getCorregimientos(districtId?: number) {
 }
 
 export async function createCorregimiento(districtId: number, name: string) {
+    await requireAdmin();
     const corregimiento = await prisma.corregimiento.create({
         data: { name, districtId }
     });
@@ -66,6 +71,7 @@ export async function getCommunities(corregimientoId?: number) {
 }
 
 export async function createCommunity(corregimientoId: number, name: string) {
+    await requireAdmin();
     const community = await prisma.community.create({
         data: { name, corregimientoId }
     });

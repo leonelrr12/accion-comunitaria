@@ -13,8 +13,8 @@ export default function GestionRoles() {
 
     const [isAdding, setIsAdding] = useState(false);
     const [editingId, setEditingId] = useState<number | null>(null);
-    const [newRole, setNewRole] = useState({ name: "", description: "" });
-    const [editRole, setEditRole] = useState({ name: "", description: "" });
+    const [newRole, setNewRole] = useState({ name: "", description: "", level: 99 });
+    const [editRole, setEditRole] = useState({ name: "", description: "", level: 99 });
 
     // Initial load from DB
     useEffect(() => {
@@ -34,7 +34,7 @@ export default function GestionRoles() {
             const result = await createRole(newRole);
             if (result.success) {
                 await loadRoles();
-                setNewRole({ name: "", description: "" });
+                setNewRole({ name: "", description: "", level: 99 });
                 setIsAdding(false);
                 toast.success("Rol creado con éxito");
             } else {
@@ -45,7 +45,7 @@ export default function GestionRoles() {
 
     const startEdit = (role: any) => {
         setEditingId(role.id);
-        setEditRole({ name: role.name, description: role.description });
+        setEditRole({ name: role.name, description: role.description, level: role.level ?? 99 });
     };
 
     const handleUpdate = (id: number) => {
@@ -94,60 +94,8 @@ export default function GestionRoles() {
                     </h1>
                     <p className="text-slate-500 mt-1">Define los niveles de acceso y perfiles del sistema real.</p>
                 </div>
-                <button
-                    onClick={() => setIsAdding(true)}
-                    className="bg-indigo-600 text-white px-5 py-2.5 rounded-xl font-bold hover:bg-indigo-700 transition-all flex items-center gap-2 shadow-lg shadow-indigo-100"
-                >
-                    <Plus className="h-5 w-5" />
-                    Nuevo Rol
-                </button>
+                {/* Los roles son fijos: crear uno requiere programación adicional */}
             </div>
-
-            {/* FORMULARIO AGREGAR */}
-            {isAdding && (
-                <div className="bg-white p-6 rounded-2xl shadow-sm border-2 border-indigo-100 animate-in fade-in slide-in-from-top-4">
-                    <form onSubmit={handleAdd} className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-700">Nombre del Rol</label>
-                            <input
-                                type="text"
-                                required
-                                placeholder="Ej: Lider Regional"
-                                className="w-full p-3 border rounded-xl"
-                                value={newRole.name}
-                                onChange={(e) => setNewRole({ ...newRole, name: e.target.value })}
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <label className="text-sm font-semibold text-slate-700">Descripción</label>
-                            <input
-                                type="text"
-                                required
-                                placeholder="Breve descripción de las funciones"
-                                className="w-full p-3 border rounded-xl"
-                                value={newRole.description}
-                                onChange={(e) => setNewRole({ ...newRole, description: e.target.value })}
-                            />
-                        </div>
-                        <div className="md:col-span-2 flex justify-end gap-3">
-                            <button
-                                type="button"
-                                onClick={() => setIsAdding(false)}
-                                className="px-5 py-2.5 text-slate-600 font-semibold hover:bg-slate-50 rounded-xl transition-colors"
-                            >
-                                Cancelar
-                            </button>
-                            <button
-                                type="submit"
-                                disabled={isPending}
-                                className="px-8 py-2.5 bg-indigo-600 text-white font-bold rounded-xl hover:bg-indigo-700 transition-all shadow-md shadow-indigo-50 disabled:opacity-50"
-                            >
-                                {isPending ? "Guardando..." : "Guardar Rol"}
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            )}
 
             {/* LISTADO DE ROLES */}
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
@@ -167,6 +115,16 @@ export default function GestionRoles() {
                                     value={editRole.description}
                                     onChange={(e) => setEditRole({ ...editRole, description: e.target.value })}
                                 />
+                                <div className="flex items-center gap-2">
+                                    <label className="text-xs font-semibold text-slate-500">Nivel (1 = más alto):</label>
+                                    <input
+                                        type="number"
+                                        min={1}
+                                        className="w-24 p-1.5 border rounded-lg text-xs"
+                                        value={editRole.level}
+                                        onChange={(e) => setEditRole({ ...editRole, level: parseInt(e.target.value, 10) || 99 })}
+                                    />
+                                </div>
                                 <div className="flex justify-end gap-2">
                                     <button onClick={() => setEditingId(null)} className="p-2 text-slate-400 hover:text-slate-600">
                                         <X className="h-4 w-4" />
@@ -198,6 +156,9 @@ export default function GestionRoles() {
                                 <h3 className="text-lg font-bold text-slate-900 group-hover:text-indigo-600 transition-colors uppercase tracking-tight">
                                     {role.name}
                                 </h3>
+                                <span className="inline-block mt-1 px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-600 text-[11px] font-bold">
+                                    Nivel {role.level ?? 99}
+                                </span>
                                 <p className="text-sm text-slate-500 mt-2 leading-relaxed">
                                     {role.description}
                                 </p>

@@ -1,11 +1,13 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireAdmin, requireAuth } from "@/lib/auth-guard";
 
 import { revalidatePath } from "next/cache";
 
 export async function getRoles() {
     try {
+        await requireAuth();
         const roles = await prisma.role.findMany({
             orderBy: {
                 name: 'asc'
@@ -18,8 +20,9 @@ export async function getRoles() {
     }
 }
 
-export async function createRole(data: { name: string, description: string }) {
+export async function createRole(data: { name: string, description: string, level?: number }) {
     try {
+        await requireAdmin();
         const role = await prisma.role.create({ data });
         revalidatePath("/admin/dashboard/roles");
         return { success: true, role };
@@ -29,8 +32,9 @@ export async function createRole(data: { name: string, description: string }) {
     }
 }
 
-export async function updateRoleAction(id: number, data: { name?: string, description?: string }) {
+export async function updateRoleAction(id: number, data: { name?: string, description?: string, level?: number }) {
     try {
+        await requireAdmin();
         const role = await prisma.role.update({
             where: { id },
             data
@@ -45,6 +49,7 @@ export async function updateRoleAction(id: number, data: { name?: string, descri
 
 export async function deleteRoleAction(id: number) {
     try {
+        await requireAdmin();
         await prisma.role.delete({ where: { id } });
         revalidatePath("/admin/dashboard/roles");
         return { success: true };

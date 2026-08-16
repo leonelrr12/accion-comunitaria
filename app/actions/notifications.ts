@@ -1,6 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
+import { requireAuth, requireAdmin } from "@/lib/auth-guard";
 
 export async function getUnreadNotifications(userId: number) {
     try {
@@ -17,6 +18,7 @@ export async function getUnreadNotifications(userId: number) {
 
 export async function markAsRead(notificationId: number) {
     try {
+        await requireAuth();
         await prisma.notification.update({
             where: { id: notificationId },
             data: { isRead: true }
@@ -30,6 +32,7 @@ export async function markAsRead(notificationId: number) {
 
 export async function markAllAsRead(userId: number) {
     try {
+        await requireAuth();
         await prisma.notification.updateMany({
             where: { userId, isRead: false },
             data: { isRead: true }
@@ -43,6 +46,7 @@ export async function markAllAsRead(userId: number) {
 
 export async function createSystemNotification(userId: number, title: string, message: string, link?: string) {
     try {
+        await requireAdmin();
         await prisma.notification.create({
             data: {
                 userId,

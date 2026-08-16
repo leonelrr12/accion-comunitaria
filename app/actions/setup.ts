@@ -5,6 +5,11 @@ import bcrypt from "bcryptjs";
 
 export async function initialSetup() {
     try {
+        // Bootstrap: solo permitido mientras el sistema no tenga usuarios
+        const existingUsers = await prisma.user.count();
+        if (existingUsers > 0) {
+            throw new Error("El sistema ya fue inicializado. Contacta al administrador.");
+        }
         // 1. Crear Roles
         const roleData = [
             { name: "ADMIN", description: "Acceso total al sistema" },
