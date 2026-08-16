@@ -5,6 +5,7 @@ import bcrypt from "bcryptjs";
 import { revalidatePath } from "next/cache";
 import type { CreateUserInput, UpdateUserInput } from "@/types";
 import { logAction } from "./audit";
+import { issuePasswordResetForUser } from "./password";
 
 interface GetUsersParams {
     page?: number;
@@ -127,6 +128,20 @@ export async function createUserAction(data: CreateUserInput) {
                     }
                 });
             }
+        }
+
+        // 4. Enviar correo de bienvenida con link para definir contraseña
+        // (no se expone la contraseña temporal en el correo; el link es de un solo uso, 1 hora)
+        try {
+            await issuePasswordResetForUser(
+                newUser.id,
+                newUser.email,
+                `${newUser.name} ${newUser.lastName}`,
+                newUser.inviteCode
+            );
+        } catch (emailError) {
+            console.error("Error enviando correo de bienvenida:", emailError);
+            // El alta no falla si el correo no sale; el usuario puede usar la contraseña temporal
         }
 
         revalidatePath("/admin/dashboard/usuarios");

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import Link from "next/link";
 import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { loginAction } from "../actions/auth";
@@ -94,6 +95,11 @@ export default function Login() {
                                 value={password}
                                 onChange={(e) => setPassword(e.target.value)}
                             />
+                            <div className="flex justify-end mt-2">
+                                <Link href="/recuperar-contrasena" className="text-xs text-blue-600 hover:text-blue-800 font-medium">
+                                    ¿Olvidaste tu contraseña?
+                                </Link>
+                            </div>
                         </div>
                     </div>
 

@@ -95,8 +95,22 @@ model User {
   role            Role            @relation(fields: [roleId], references: [id])
   auditLogs       AuditLog[]
   notifications   Notification[]
+  passwordResetTokens PasswordResetToken[]
 
   @@map("users")
+}
+
+// Token de restablecimiento de contraseña (recuperación y bienvenida por email)
+model PasswordResetToken {
+  id        Int      @id @default(autoincrement())
+  tokenHash String   @unique // sha256 del token — nunca se guarda el token en claro
+  userId    Int
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime @default(now())
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_reset_tokens")
 }
 
 model UserHierarchy {
