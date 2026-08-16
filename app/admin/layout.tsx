@@ -20,11 +20,13 @@ function SidebarContent({
     navigation,
     currentUser,
     onLogout,
+    onNavigate,
     pathname
 }: {
     navigation: NavItem[];
     currentUser: { name: string; lastName: string };
     onLogout: () => void;
+    onNavigate?: () => void;
     pathname: string;
 }) {
     return (
@@ -40,6 +42,7 @@ function SidebarContent({
                         <Link
                             key={item.name}
                             href={item.href}
+                            onClick={onNavigate}
                             className={`flex items-center px-3 py-2.5 text-sm font-medium rounded-lg group transition-all duration-200 ${
                                 isActive
                                     ? 'bg-slate-800 text-white'
@@ -96,6 +99,11 @@ export default function AdminLayout({
         setMounted(true);
     }, []);
 
+    // Cerrar menú móvil al cambiar de ruta
+    useEffect(() => {
+        setIsMobileMenuOpen(false);
+    }, [pathname]);
+
     useEffect(() => {
         if (mounted) {
             if (!currentUser) {
@@ -150,7 +158,7 @@ export default function AdminLayout({
                 <div className="md:hidden fixed inset-0 z-[60] flex">
                     <div className="fixed inset-0 bg-slate-950/80 backdrop-blur-md" onClick={() => setIsMobileMenuOpen(false)}></div>
                     <aside className="relative w-[280px] bg-slate-900 text-white shadow-2xl h-full animate-in slide-in-from-left duration-300 border-r border-slate-800">
-                        <SidebarContent navigation={navigation} currentUser={currentUser} onLogout={handleLogout} pathname={pathname} />
+                        <SidebarContent navigation={navigation} currentUser={currentUser} onLogout={handleLogout} onNavigate={() => setIsMobileMenuOpen(false)} pathname={pathname} />
                     </aside>
                 </div>
             )}

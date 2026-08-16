@@ -119,10 +119,14 @@ export default function DashboardLayout({
         return null;
     }
 
+    // El menú se adapta al rol: el Activista no registra líderes ni tiene equipo
+    const canManageTeam = currentUser.role !== "Activista";
     const navigation: NavItem[] = [
         { name: 'Panel Principal', href: '/dashboard', icon: LayoutDashboard },
         { name: 'Gestión de Afiliados', href: '/dashboard/afiliados', icon: Users },
-        { name: 'Gestión de Activistas', href: '/dashboard/activistas', icon: Users2 },
+        ...(canManageTeam
+            ? [{ name: 'Gestión de Activistas', href: '/dashboard/activistas', icon: Users2 }]
+            : []),
         { name: 'Mi Configuración', href: '/dashboard/configuracion', icon: Settings },
     ];
 
