@@ -13,22 +13,36 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Acción Comunitaria | Sistema de Gestión",
-  description: "Plataforma de gestión comunitaria y liderazgo político.",
+  metadataBase: new URL("https://ac.sosaalcalde.com"),
+  title: {
+    default: "Acción Comunitaria | Sistema de Gestión",
+    template: "%s | Acción Comunitaria",
+  },
+  description: "Plataforma de gestión comunitaria y liderazgo.",
+  icons: {
+    icon: "/icon.png",
+    apple: "/apple-icon.png",
+  },
   openGraph: {
     title: "Acción Comunitaria | Sistema de Gestión",
-    description: "Plataforma de gestión comunitaria y liderazgo político.",
-    url: 'http://147.93.145.67',
-    siteName: 'Tu Red de influencia',
+    description: "Plataforma de gestión comunitaria y liderazgo.",
+    url: "https://ac.sosaalcalde.com",
+    siteName: "Acción Comunitaria",
     images: [
       {
-        url: 'http://147.93.145', // URL completa a tu imagen en /public
+        url: "/og-image.png",
         width: 1200,
         height: 630,
       },
     ],
-    locale: 'es_ES',
-    type: 'website',
+    locale: "es_PA",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Acción Comunitaria | Sistema de Gestión",
+    description: "Plataforma de gestión comunitaria y liderazgo.",
+    images: ["/og-image.png"],
   },
 };
 
