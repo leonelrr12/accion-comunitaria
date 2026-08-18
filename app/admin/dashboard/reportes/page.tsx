@@ -13,7 +13,7 @@ import {
     getLeadersForReport,
 } from "../../../actions/reports";
 import { getProvinces, getDistricts, getCorregimientos, getCommunities } from "../../../actions/geography";
-import { exportToCSV } from "@/lib/export";
+import { exportToXLSX } from "@/lib/export";
 
 type Tab = "ubicacion" | "lider";
 
@@ -119,7 +119,7 @@ export default function ReportesPage() {
     };
 
     const exportAffiliates = (data: Affiliate[], filename: string) => {
-        exportToCSV(data, filename, [
+        exportToXLSX(data, filename, [
             { label: "Nombre", key: "name" },
             { label: "Apellido", key: "lastName" },
             { label: "Cédula", key: "cedula" },
@@ -216,7 +216,7 @@ export default function ReportesPage() {
                                         onClick={() => exportAffiliates(withLeaderName(affiliates), scope ? `afiliados_${scope.replace(/[^a-zA-Z0-9]/g, "_")}` : "afiliados")}
                                         className="inline-flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-800"
                                     >
-                                        <Download className="h-4 w-4" /> Exportar CSV
+                                        <Download className="h-4 w-4" /> Exportar Excel
                                     </button>
                                 )}
                             </div>
@@ -241,8 +241,22 @@ export default function ReportesPage() {
                                             <tr><td colSpan={2} className="px-6 py-10 text-center text-slate-400">Sin datos para este nivel.</td></tr>
                                         )}
                                         {rows.map((r) => (
-                                            <tr key={r.id} className="hover:bg-slate-50">
-                                                <td className="px-6 py-3 font-semibold text-slate-900">{r.name}</td>
+                                            <tr
+                                                key={r.id}
+                                                onClick={() => {
+                                                    if (level === "provincia") onProvince(r.id.toString());
+                                                    else if (level === "distrito") onDistrict(r.id.toString());
+                                                    else if (level === "corregimiento") onCorregimiento(r.id.toString());
+                                                }}
+                                                className="hover:bg-blue-50 cursor-pointer transition-colors"
+                                                title="Haz clic para explorar este nivel"
+                                            >
+                                                <td className="px-6 py-3 font-semibold text-slate-900">
+                                                    <span className="inline-flex items-center gap-2">
+                                                        {r.name}
+                                                        <ChevronDown className="h-3.5 w-3.5 text-slate-300 rotate-[-90deg]" />
+                                                    </span>
+                                                </td>
                                                 <td className="px-6 py-3 text-right font-bold text-blue-600">{r._count?.persons ?? 0}</td>
                                             </tr>
                                         ))}
@@ -320,7 +334,7 @@ export default function ReportesPage() {
                                         onClick={() => exportAffiliates(withLeaderName(leaderReport.affiliates), "afiliados_lider")}
                                         className="inline-flex items-center gap-2 text-sm font-bold text-blue-600 hover:text-blue-800"
                                     >
-                                        <Download className="h-4 w-4" /> Exportar CSV
+                                        <Download className="h-4 w-4" /> Exportar Excel
                                     </button>
                                 )}
                             </div>
