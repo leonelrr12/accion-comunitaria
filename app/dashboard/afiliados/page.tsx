@@ -9,7 +9,7 @@ import { mapPersonFromDB } from "@/lib/mappers";
 import Pagination from "../../../components/ui/Pagination";
 import SearchBar from "../../../components/ui/SearchBar";
 import { useDebounce } from "@/lib/useDebounce";
-import { exportToCSV } from "@/lib/export";
+import { exportToXLSX } from "@/lib/export";
 import { toast } from "sonner";
 import type { Person } from "@/types";
 
@@ -45,7 +45,7 @@ export default function Afiliados() {
                 { label: "Comunidad", key: "community.name" },
                 { label: "Fecha Registro", key: "createdAt" },
             ];
-            exportToCSV(data, "afiliados", headers);
+            exportToXLSX(data, "afiliados", headers);
             toast.success("Exportación completada");
         } catch (error) {
             console.error("Export error:", error);
@@ -104,7 +104,7 @@ export default function Afiliados() {
                         className="inline-flex items-center justify-center rounded-xl border border-gray-200 bg-white px-6 py-2.5 text-sm font-bold text-slate-700 shadow-sm hover:bg-gray-50 transition-all disabled:opacity-50"
                     >
                         {isExporting ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <div className="mr-2 h-4 w-4 border-2 border-slate-400 rounded-sm" />}
-                        Exportar CSV
+                        Exportar Excel
                     </button>
                     <Link
                         href="/dashboard/nuevo-afiliado"
