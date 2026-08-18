@@ -5,6 +5,7 @@ import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { LocationSelector } from "../../../../components/ui/LocationSelector";
 import { createUserAction, getAllUsers } from "../../../actions/users";
+import { getRoles } from "../../../actions/roles";
 import { Loader2, MapPin, Network, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 
@@ -21,15 +22,27 @@ export default function CrearLider() {
         districtId: "2",    // San Miguelito
         corregimientoId: "",
         communityId: "",
-        role: "Lider de Zona",
+        role: "",
         parentLeaderId: ""
     });
 
     const [availableLeaders, setAvailableLeaders] = useState<any[]>([]);
+    const [roles, setRoles] = useState<any[]>([]);
+
+    // Roles en orden de nivel (1 = más alto), excluyendo ADMIN (no se puede crear)
+    useEffect(() => {
+        getRoles().then((all: any[]) => {
+            const sorted = all
+                .filter((r: any) => r.level > 1)
+                .sort((a: any, b: any) => a.level - b.level);
+            setRoles(sorted);
+            setFormData((prev) => ({ ...prev, role: sorted[0]?.name || "" }));
+        });
+    }, []);
 
     useEffect(() => {
         getAllUsers().then(users => {
-            setAvailableLeaders(users.filter((u: any) => u.role.name !== "ADMIN"));
+            setAvailableLeaders(users);
         });
     }, []);
 
@@ -117,10 +130,12 @@ export default function CrearLider() {
                                     onChange={(e) => setFormData({ ...formData, role: e.target.value })}
                                     disabled={isPending}
                                 >
-                                    <option value="Lider Regional">Lider Regional</option>
-                                    <option value="Lider de Zona">Lider de Zona</option>
-                                    <option value="Comunitario">Comunitario</option>
-                                    <option value="Activista">Activista</option>
+                                    <option value="">Selecciona un rol</option>
+                                    {roles.map((r: any) => (
+                                        <option key={r.id} value={r.name}>
+                                            Nivel {r.level} · {r.name}
+                                        </option>
+                                    ))}
                                 </select>
                             </div>
                             <div className="space-y-2">
@@ -157,7 +172,6 @@ export default function CrearLider() {
                                 >
                                     <option value="">Líder Principal (Nivel 0)</option>
                                     {availableLeaders
-                                        .filter((u: any) => u.role.name !== "ADMIN")
                                         .filter((u: any) => {
                                             if (u.role.name === "Activista") return false;
                                             if (u.role.name === "Comunitario" && formData.role !== "Activista") return false;
