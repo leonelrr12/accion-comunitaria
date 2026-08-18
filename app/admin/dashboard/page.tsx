@@ -143,12 +143,12 @@ export default function AdminDashboard() {
                 <div className="flex-1 min-w-0">
                     <h2 className="text-2xl font-bold leading-7 text-slate-900 sm:text-3xl sm:truncate flex items-center gap-3">
                         Bienvenido, {currentUser?.name}
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
-                            Administrador Real
+                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                            {currentUser?.realRole || currentUser?.role}
                         </span>
                     </h2>
                     <p className="mt-2 text-sm text-slate-500">
-                        Consola de administración conectada a la base de datos PostgreSQL.
+                        Centro de mando del movimiento: lidera tu territorio, tu equipo y tus comunidades.
                     </p>
                 </div>
                 <div className="mt-4 flex gap-3 md:mt-0 md:ml-4">

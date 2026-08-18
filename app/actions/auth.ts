@@ -100,6 +100,7 @@ export async function loginAction(
             name: user.name,
             lastName: user.lastName,
             role: user.id === SUPER_ADMIN_ID ? "ADMIN" : user.role.name,
+            realRole: user.role.name,
             email: user.email,
             provinceId: user.provinceId,
             districtId: user.districtId,

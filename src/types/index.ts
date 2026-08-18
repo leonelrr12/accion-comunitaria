@@ -11,6 +11,7 @@ export interface Role {
 export interface User {
     id: number;
     role: string;
+    realRole?: string | null;
     name: string;
     lastName: string;
     email: string;

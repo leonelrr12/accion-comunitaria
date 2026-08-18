@@ -75,6 +75,10 @@ export async function createAffiliate(data: AffiliateInput) {
     if (!data.leaderUserId) {
         return { success: false, error: "El campo Sponsor/Líder es estrictamente obligatorio." };
     }
+
+    if (!data.phone) {
+        return { success: false, error: "El teléfono o celular es obligatorio." };
+    }
     
     try {
         const newPerson = await prisma.person.create({
