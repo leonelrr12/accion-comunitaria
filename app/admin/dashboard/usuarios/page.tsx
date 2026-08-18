@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useTransition, useCallback } from "react";
 import { useAppStore } from "@/lib/store";
-import { UserPlus, Shield, ArrowRight, Loader2, Edit2, Trash2, X as CloseIcon, MapPin } from "lucide-react";
+import { UserPlus, Shield, Loader2, Edit2, Trash2, X as CloseIcon, MapPin } from "lucide-react";
 import Link from "next/link";
 import { LocationSelector } from "../../../../components/ui/LocationSelector";
 import { toast } from "sonner";
@@ -57,7 +57,7 @@ export default function GestionUsuarios() {
         // El ADMIN no se puede crear (regla jerárquica): default al primer rol creable
         setAdminData((prev) =>
             prev.role === "ADMIN" || prev.role === ""
-                ? { ...prev, role: mappedRoles.filter((r) => r.level > 1)[0]?.name || "" }
+                ? { ...prev, role: mappedRoles.filter((r) => r.level > 2)[0]?.name || "" }
                 : prev
         );
         setTotalPages(result.totalPages);
@@ -85,8 +85,8 @@ export default function GestionUsuarios() {
         phone: "",
         role: "ADMIN",
         parentLeaderId: "",
-        provinceId: "",
-        districtId: "",
+        provinceId: process.env.NEXT_PUBLIC_DEFAULT_PROVINCE_ID || "8",
+        districtId: process.env.NEXT_PUBLIC_DEFAULT_DISTRICT_ID || "2",
         corregimientoId: "",
         communityId: ""
     });
@@ -96,12 +96,12 @@ export default function GestionUsuarios() {
 
         const isGlobal = adminData.role === "Lider Global";
         if (adminData.role !== "ADMIN" && !isGlobal) {
-            if (!adminData.provinceId || !adminData.districtId || !adminData.corregimientoId) {
-                toast.warning("Este rol requiere provincia, distrito y corregimiento (la comunidad puede quedar en blanco).");
+            if (!adminData.provinceId || !adminData.districtId) {
+                toast.warning("Este rol requiere provincia y distrito (corregimiento y comunidad en blanco = multi-zona).");
                 return;
             }
-            if (adminData.role === "Activista" && !adminData.communityId) {
-                toast.warning("El Activista debe tener definida su comunidad.");
+            if (adminData.role === "Activista" && (!adminData.corregimientoId || !adminData.communityId)) {
+                toast.warning("El Activista debe tener definidos corregimiento y comunidad.");
                 return;
             }
             if (!adminData.parentLeaderId) {
@@ -118,7 +118,7 @@ export default function GestionUsuarios() {
 
             if (result.success) {
                 await refreshData();
-                setAdminData({ name: "", lastName: "", email: "", password: "", phone: "", role: "ADMIN", parentLeaderId: "", provinceId: "", districtId: "", corregimientoId: "", communityId: "" });
+                setAdminData({ name: "", lastName: "", email: "", password: "", phone: "", role: "ADMIN", parentLeaderId: "", provinceId: process.env.NEXT_PUBLIC_DEFAULT_PROVINCE_ID || "8", districtId: process.env.NEXT_PUBLIC_DEFAULT_DISTRICT_ID || "2", corregimientoId: "", communityId: "" });
                 toast.success(`Usuario creado exitosamente. Clave temporal: ${result.tempPassword}`, { duration: 20000 });
             } else {
                 toast.error("Error al crear usuario: " + result.error);
@@ -129,6 +129,19 @@ export default function GestionUsuarios() {
     const handleUpdateUser = (e: React.FormEvent) => {
         e.preventDefault();
         if (!editingUser) return;
+
+        // Ubicación según rol (mismas reglas que en la creación)
+        const isGlobal = editingUser.role === "Lider Global";
+        if (editingUser.role !== "ADMIN" && !isGlobal) {
+            if (!editingUser.provinceId || !editingUser.districtId) {
+                toast.warning("Este rol requiere provincia y distrito (corregimiento y comunidad en blanco = multi-zona).");
+                return;
+            }
+            if (editingUser.role === "Activista" && (!editingUser.corregimientoId || !editingUser.communityId)) {
+                toast.warning("El Activista debe tener definidos corregimiento y comunidad.");
+                return;
+            }
+        }
 
         const userId = typeof editingUser.id === 'string' ? parseInt(editingUser.id) : editingUser.id;
 
@@ -268,7 +281,10 @@ export default function GestionUsuarios() {
                                     .filter(u => {
                                         if (u.role === "ADMIN") return false; // ADMIN fuera de la jerarquía
                                         if (u.role === "Activista") return false;
-                                        return true;
+                                        // Solo líderes con nivel jerárquico superior al rol que se crea
+                                        const uLevel = roles.find((r: any) => r.name === u.role)?.level ?? 99;
+                                        const tLevel = roles.find((r: any) => r.name === adminData.role)?.level ?? 99;
+                                        return uLevel < tLevel;
                                     })
                                     .map(u => (
                                         <option key={u.id} value={u.id}>{u.name} {u.lastName} ({u.role})</option>
@@ -285,12 +301,16 @@ export default function GestionUsuarios() {
                                 districtId={adminData.districtId}
                                 corregimientoId={adminData.corregimientoId}
                                 communityId={adminData.communityId}
-                                setProvinceId={(v) => setAdminData({ ...adminData, provinceId: v })}
-                                setDistrictId={(v) => setAdminData({ ...adminData, districtId: v })}
-                                setCorregimientoId={(v) => setAdminData({ ...adminData, corregimientoId: v })}
-                                setCommunityId={(v) => setAdminData({ ...adminData, communityId: v })}
+                                setProvinceId={(v) => setAdminData((p) => ({ ...p, provinceId: v }))}
+                                setDistrictId={(v) => setAdminData((p) => ({ ...p, districtId: v }))}
+                                setCorregimientoId={(v) => setAdminData((p) => ({ ...p, corregimientoId: v }))}
+                                setCommunityId={(v) => setAdminData((p) => ({ ...p, communityId: v }))}
+                                requireProvince={adminData.role !== "ADMIN" && adminData.role !== "Lider Global"}
+                                requireDistrict={adminData.role !== "ADMIN" && adminData.role !== "Lider Global"}
+                                requireCorregimiento={adminData.role === "Activista"}
+                                requireCommunity={adminData.role === "Activista"}
                             />
-                            <p className="text-xs text-slate-400">Provincia, distrito y corregimiento obligatorios; comunidad en blanco = multi-zona. El Activista debe tener comunidad.</p>
+                            <p className="text-xs text-slate-400">Provincia y distrito obligatorios; corregimiento y comunidad en blanco = multi-zona. El Activista debe tener todo definido.</p>
                         </div>
                     )}
                     <div className="flex items-end sm:col-span-2 lg:col-span-3">
@@ -304,26 +324,6 @@ export default function GestionUsuarios() {
                         </button>
                     </div>
                 </form>
-            </div>
-
-            {/* SECCIÓN 2: LÍDERES (ACCESO RÁPIDO CON UBICACIÓN) */}
-            <div className="bg-slate-900 p-6 md:p-8 rounded-2xl shadow-xl text-white flex flex-col lg:flex-row justify-between items-center gap-6">
-                <div className="flex items-center gap-4">
-                    <div className="p-3 bg-slate-800 rounded-2xl">
-                        <UserPlus className="h-7 w-7 text-emerald-400" />
-                    </div>
-                    <div>
-                        <h2 className="text-xl font-bold">Registro de Líderes por Ubicación</h2>
-                        <p className="text-slate-400 text-sm">Permite asignar territorio geográfico fijo.</p>
-                    </div>
-                </div>
-                <Link
-                    href="/admin/dashboard/nuevo-lider"
-                    className="w-full lg:w-auto bg-white text-slate-900 px-8 py-4 rounded-xl font-bold hover:bg-blue-50 transition-all flex justify-center items-center gap-2"
-                >
-                    Registrar por Zona
-                    <ArrowRight className="h-5 w-5" />
-                </Link>
             </div>
 
             {/* TABLA DE USUARIOS EXISTENTES */}
@@ -377,8 +377,8 @@ export default function GestionUsuarios() {
                                             <button
                                                 onClick={() => setEditingUser({ 
                                                     ...user, 
-                                                    provinceId: user.provinceId || 8, 
-                                                    districtId: user.districtId || 2 
+                                                    provinceId: user.provinceId || parseInt(process.env.NEXT_PUBLIC_DEFAULT_PROVINCE_ID || "8"), 
+                                                    districtId: user.districtId || parseInt(process.env.NEXT_PUBLIC_DEFAULT_DISTRICT_ID || "2") 
                                                 })}
                                                 className="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition-colors"
                                                 title="Editar Jerarquía"
@@ -493,7 +493,10 @@ export default function GestionUsuarios() {
                                                 .filter(u => {
                                                     if (u.role === "ADMIN") return false; // ADMIN fuera de la jerarquía
                                                     if (u.role === "Activista") return false;
-                                                    return true;
+                                                    // Solo líderes con nivel jerárquico superior al rol editado
+                                                    const uLevel = roles.find((r: any) => r.name === u.role)?.level ?? 99;
+                                                    const tLevel = roles.find((r: any) => r.name === editingUser.role)?.level ?? 99;
+                                                    return uLevel < tLevel;
                                                 })
                                                 .map(u => (
                                                     <option key={u.id} value={u.id}>{u.name} {u.lastName}</option>
@@ -523,6 +526,10 @@ export default function GestionUsuarios() {
                                         setCorregimientoId={(val) => setEditingUser(prev => prev ? ({ ...prev, corregimientoId: val ? Number(val) : null }) : null)}
                                         setCommunityId={(val) => setEditingUser(prev => prev ? ({ ...prev, communityId: val ? Number(val) : null }) : null)}
                                         disabled={isPending}
+                                        requireProvince={editingUser.role !== "ADMIN" && editingUser.role !== "Lider Global"}
+                                        requireDistrict={editingUser.role !== "ADMIN" && editingUser.role !== "Lider Global"}
+                                        requireCorregimiento={editingUser.role === "Activista"}
+                                        requireCommunity={editingUser.role === "Activista"}
                                     />
                                 </div>
                             </div>

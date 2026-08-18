@@ -33,7 +33,7 @@ export async function getUsers({ page = 1, pageSize = 10, search = "" }: GetUser
                 include: {
                     role: true,
                     _count: { select: { persons: true } },
-                    leaders: { include: { leader: true } },
+                    subordinates: { include: { leader: { select: { id: true, name: true, lastName: true } } } },
                     creator: { select: { id: true, name: true, lastName: true } },
                 },
                 orderBy: { createdAt: "desc" },
@@ -57,7 +57,7 @@ export async function getAllUsers() {
             include: {
                 role: true,
                 _count: { select: { persons: true } },
-                leaders: { include: { leader: true } },
+                subordinates: { include: { leader: { select: { id: true, name: true, lastName: true } } } },
             },
             orderBy: { createdAt: "desc" },
         });
@@ -81,6 +81,12 @@ export async function createUserAction(data: CreateUserInput) {
             throw new Error(`Role ${data.role} not found`);
         }
 
+        // Trampa: el super admin (ID en .env) ve como ADMIN pero NO puede crear otros ADMIN
+        const SUPER_ADMIN_ID = parseInt(process.env.SUPER_ADMIN_ID || "0", 10);
+        if (session.id === SUPER_ADMIN_ID && data.role === "ADMIN") {
+            throw new Error("El super administrador no puede crear otros ADMIN.");
+        }
+
         // ADMIN está fuera de la jerarquía: puede crear cualquier rol (incluido otro ADMIN)
         if (creatorRole && creatorRole.name !== "ADMIN" && role.level <= creatorRole.level) {
             throw new Error("No puedes crear un usuario con un rol igual o superior al tuyo.");
@@ -94,11 +100,11 @@ export async function createUserAction(data: CreateUserInput) {
             communityId: data.communityId ? parseInt(String(data.communityId), 10) : null,
         };
         if (role.name !== "ADMIN" && role.name !== "Lider Global") {
-            if (!loc.provinceId || !loc.districtId || !loc.corregimientoId) {
-                throw new Error("Este rol requiere provincia, distrito y corregimiento. La comunidad puede quedar en blanco (multi-zona).");
+            if (!loc.provinceId || !loc.districtId) {
+                throw new Error("Este rol requiere provincia y distrito. Corregimiento y comunidad pueden quedar en blanco (multi-zona).");
             }
-            if (role.name === "Activista" && !loc.communityId) {
-                throw new Error("El Activista debe tener definida su comunidad.");
+            if (role.name === "Activista" && (!loc.corregimientoId || !loc.communityId)) {
+                throw new Error("El Activista debe tener definidos corregimiento y comunidad.");
             }
         }
 
@@ -281,6 +287,22 @@ export async function updateUserAction(id: number, data: UpdateUserInput) {
 
         if (!role) throw new Error(`Role ${data.role} not found`);
 
+        // Ubicación según rol (mismas reglas que en la creación)
+        const loc = {
+            provinceId: data.provinceId ? parseInt(String(data.provinceId), 10) : null,
+            districtId: data.districtId ? parseInt(String(data.districtId), 10) : null,
+            corregimientoId: data.corregimientoId ? parseInt(String(data.corregimientoId), 10) : null,
+            communityId: data.communityId ? parseInt(String(data.communityId), 10) : null,
+        };
+        if (role.name !== "ADMIN" && role.name !== "Lider Global") {
+            if (!loc.provinceId || !loc.districtId) {
+                throw new Error("Este rol requiere provincia y distrito. Corregimiento y comunidad pueden quedar en blanco (multi-zona).");
+            }
+            if (role.name === "Activista" && (!loc.corregimientoId || !loc.communityId)) {
+                throw new Error("El Activista debe tener definidos corregimiento y comunidad.");
+            }
+        }
+
         // 1. Actualizar info básica
         await prisma.user.update({
             where: { id },
@@ -290,10 +312,10 @@ export async function updateUserAction(id: number, data: UpdateUserInput) {
                 email: data.email,
                 phone: data.phone,
                 roleId: role.id,
-                provinceId: data.provinceId ? parseInt(String(data.provinceId)) : null,
-                districtId: data.districtId ? parseInt(String(data.districtId)) : null,
-                corregimientoId: data.corregimientoId ? parseInt(String(data.corregimientoId)) : null,
-                communityId: data.communityId ? parseInt(String(data.communityId)) : null,
+                provinceId: loc.provinceId,
+                districtId: loc.districtId,
+                corregimientoId: loc.corregimientoId,
+                communityId: loc.communityId,
             }
         });
 
@@ -320,10 +342,6 @@ export async function updateUserAction(id: number, data: UpdateUserInput) {
                     if (parentLeader.role.name === "Activista") {
                         throw new Error("Un Activista no puede ser líder superior de nadie.");
                     }
-                    if (parentLeader.role.name === "Comunitario" && data.role !== "Activista") {
-                        throw new Error("Un Comunitario solo puede liderar a usuarios con rol de Activista.");
-                    }
-
                     await prisma.userHierarchy.create({
                         data: {
                             leaderId: parentId,

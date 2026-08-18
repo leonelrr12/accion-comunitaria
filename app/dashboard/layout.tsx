@@ -104,9 +104,9 @@ export default function DashboardLayout({
         if (mounted) {
             if (!currentUser) {
                 router.push("/login");
-            } else if (currentUser.role === "ADMIN") {
-                router.push("/admin/dashboard");
             }
+            // El ADMIN usa el panel admin, pero también puede entrar al dashboard
+            // (Registrar Nuevo Usuario está ahí) — ya no se le rebota.
         }
     }, [currentUser, mounted, router]);
 

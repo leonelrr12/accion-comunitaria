@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useTransition, useEffect } from "react";
+import { useState, useTransition, useEffect, useRef } from "react";
 import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { LocationSelector } from "../../../components/ui/LocationSelector";
@@ -31,13 +31,15 @@ export default function NuevoUsuario() {
         parentLeaderId: "",
     });
 
-    // Prellenar ubicación desde el creador; los blancos se llenan al momento de crear
+    // Prellenar ubicación desde el creador UNA sola vez (no pisa la selección del usuario)
+    const prefilledRef = useRef(false);
     useEffect(() => {
-        if (currentUser) {
+        if (currentUser && !prefilledRef.current) {
+            prefilledRef.current = true;
             setFormData((prev) => ({
                 ...prev,
-                provinceId: currentUser.provinceId?.toString() || "",
-                districtId: currentUser.districtId?.toString() || "",
+                provinceId: currentUser.provinceId?.toString() || process.env.NEXT_PUBLIC_DEFAULT_PROVINCE_ID || "",
+                districtId: currentUser.districtId?.toString() || process.env.NEXT_PUBLIC_DEFAULT_DISTRICT_ID || "",
                 corregimientoId: currentUser.corregimientoId?.toString() || "",
                 communityId: currentUser.communityId?.toString() || "",
             }));
@@ -64,7 +66,9 @@ export default function NuevoUsuario() {
                     .filter((r: any) => r.level > myRole.level)
                     .sort((a: any, b: any) => a.level - b.level);
                 setCreatableRoles(allowed);
-                setFormData((prev) => ({ ...prev, role: allowed[0]?.name || "" }));
+                // Default al primer rol que exige líder superior (Lider Global queda para elegirlo explícitamente)
+                const defaultRole = allowed.find((r: any) => r.name !== "Lider Global")?.name || allowed[0]?.name || "";
+                setFormData((prev) => ({ ...prev, role: defaultRole }));
             }
         });
     }, [currentUser?.role]);
@@ -79,12 +83,12 @@ export default function NuevoUsuario() {
 
         // Ubicación según rol: comunidad en blanco = multi-zona; Lider Global es nacional
         const isGlobal = formData.role === "Lider Global";
-        if (!isGlobal && (!formData.provinceId || !formData.districtId || !formData.corregimientoId)) {
-            toast.warning("Este rol requiere provincia, distrito y corregimiento (la comunidad puede quedar en blanco).");
+        if (!isGlobal && (!formData.provinceId || !formData.districtId)) {
+            toast.warning("Este rol requiere provincia y distrito (corregimiento y comunidad en blanco = multi-zona).");
             return;
         }
-        if (formData.role === "Activista" && !formData.communityId) {
-            toast.warning("El Activista debe tener definida su comunidad.");
+        if (formData.role === "Activista" && (!formData.corregimientoId || !formData.communityId)) {
+            toast.warning("El Activista debe tener definidos corregimiento y comunidad.");
             return;
         }
         // El Líder Superior es obligatorio cuando lo elige el ADMIN (los demás roles asignan bajo sí mismos)

@@ -19,6 +19,11 @@ interface LocationSelectorProps {
     setCorregimientoId: (val: string) => void;
     setCommunityId: (val: string) => void;
     disabled?: boolean;
+    // Campos obligatorios (por rol): corregimiento/comunidad en blanco = multi-zona
+    requireProvince?: boolean;
+    requireDistrict?: boolean;
+    requireCorregimiento?: boolean;
+    requireCommunity?: boolean;
 }
 
 export function LocationSelector({
@@ -31,6 +36,10 @@ export function LocationSelector({
     setCorregimientoId,
     setCommunityId,
     disabled = false,
+    requireProvince,
+    requireDistrict,
+    requireCorregimiento,
+    requireCommunity,
 }: LocationSelectorProps) {
     const [provinces, setProvinces] = useState<any[]>([]);
     const [districts, setDistricts] = useState<any[]>([]);
@@ -120,7 +129,7 @@ export function LocationSelector({
                         <select
                             value={provinceId}
                             disabled={disabled}
-                            required
+                            required={requireProvince !== false}
                             onChange={(e) => {
                                 setProvinceId(e.target.value);
                                 setDistrictId("");
@@ -152,7 +161,7 @@ export function LocationSelector({
                         <select
                             value={districtId}
                             disabled={disabled || !provinceId}
-                            required
+                            required={requireDistrict !== false}
                             onChange={(e) => {
                                 setDistrictId(e.target.value);
                                 setCorregimientoId("");
@@ -183,7 +192,7 @@ export function LocationSelector({
                         <select
                             value={corregimientoId}
                             disabled={disabled || !districtId}
-                            required
+                            required={requireCorregimiento !== false}
                             onChange={(e) => {
                                 setCorregimientoId(e.target.value);
                                 setCommunityId("");
@@ -213,7 +222,7 @@ export function LocationSelector({
                         <select
                             value={communityId}
                             disabled={disabled || !corregimientoId}
-                            required
+                            required={requireCommunity !== false}
                             onChange={(e) => setCommunityId(e.target.value)}
                             className="block w-full bg-white border border-gray-200 text-gray-900 rounded-xl py-3 px-4 pr-10 leading-tight focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all duration-200 shadow-sm disabled:bg-gray-50 disabled:text-gray-400 hover:border-blue-400 group-disabled:hover:border-gray-200 appearance-none"
                         >

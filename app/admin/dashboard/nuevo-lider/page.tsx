@@ -18,8 +18,8 @@ export default function CrearLider() {
         lastName: "",
         email: "",
         phone: "",
-        provinceId: "8",    // Panamá
-        districtId: "2",    // San Miguelito
+        provinceId: process.env.NEXT_PUBLIC_DEFAULT_PROVINCE_ID || "8",
+        districtId: process.env.NEXT_PUBLIC_DEFAULT_DISTRICT_ID || "2",
         corregimientoId: "",
         communityId: "",
         role: "",
@@ -52,12 +52,12 @@ export default function CrearLider() {
         e.preventDefault();
 
         // Ubicación según rol: comunidad en blanco = multi-zona; Lider Global es nacional
-        if (formData.role !== "Lider Global" && (!formData.provinceId || !formData.districtId || !formData.corregimientoId)) {
-            toast.warning("Este rol requiere provincia, distrito y corregimiento (la comunidad puede quedar en blanco).");
+        if (formData.role !== "Lider Global" && (!formData.provinceId || !formData.districtId)) {
+            toast.warning("Este rol requiere provincia y distrito (corregimiento y comunidad en blanco = multi-zona).");
             return;
         }
-        if (formData.role === "Activista" && !formData.communityId) {
-            toast.warning("El Activista debe tener definida su comunidad.");
+        if (formData.role === "Activista" && (!formData.corregimientoId || !formData.communityId)) {
+            toast.warning("El Activista debe tener definidos corregimiento y comunidad.");
             return;
         }
         if (formData.role !== "Lider Global" && !formData.parentLeaderId) {
@@ -183,7 +183,10 @@ export default function CrearLider() {
                                         .filter((u: any) => {
                                             if (u.role.name === "ADMIN") return false; // ADMIN fuera de la jerarquía
                                             if (u.role.name === "Activista") return false;
-                                            return true;
+                                            // Solo líderes con nivel jerárquico superior al rol creado
+                                            const uLevel = roles.find((r: any) => r.name === u.role.name)?.level ?? 99;
+                                            const tLevel = roles.find((r: any) => r.name === formData.role)?.level ?? 99;
+                                            return uLevel < tLevel;
                                         })
                                         .map((u: any) => (
                                             <option key={u.id} value={u.id}>{u.name} {u.lastName} ({u.role.name})</option>
@@ -214,6 +217,10 @@ export default function CrearLider() {
                                 setCorregimientoId={(val) => setFormData((prev) => ({ ...prev, corregimientoId: val }))}
                                 setCommunityId={(val) => setFormData((prev) => ({ ...prev, communityId: val }))}
                                 disabled={isPending}
+                                requireProvince={formData.role !== "ADMIN" && formData.role !== "Lider Global"}
+                                requireDistrict={formData.role !== "ADMIN" && formData.role !== "Lider Global"}
+                                requireCorregimiento={formData.role === "Activista"}
+                                requireCommunity={formData.role === "Activista"}
                             />
                         </div>
                     </div>

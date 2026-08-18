@@ -20,8 +20,8 @@ export default function ConfiguracionPage() {
     const [profileSaved, setProfileSaved] = useState(false);
 
     // Ubicación
-    const [provinceId, setProvinceId] = useState(currentUser?.provinceId?.toString() || "8");
-    const [districtId, setDistrictId] = useState(currentUser?.districtId?.toString() || "2");
+    const [provinceId, setProvinceId] = useState(currentUser?.provinceId?.toString() || process.env.NEXT_PUBLIC_DEFAULT_PROVINCE_ID || "8");
+    const [districtId, setDistrictId] = useState(currentUser?.districtId?.toString() || process.env.NEXT_PUBLIC_DEFAULT_DISTRICT_ID || "2");
     const [corregimientoId, setCorregimientoId] = useState(currentUser?.corregimientoId?.toString() || "");
     const [communityId, setCommunityId] = useState(currentUser?.communityId?.toString() || "");
 

