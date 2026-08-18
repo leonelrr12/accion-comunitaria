@@ -141,6 +141,8 @@ export async function createUserAction(data: CreateUserInput) {
             ? parseInt(String(data.parentLeaderId))
             : creatorRole?.name === "ADMIN" ? null : session.id;
         if (parentLeaderId) {
+            // Evitar que el usuario sea su propio líder (misma regla que en la edición)
+            if (parentLeaderId === newUser.id) throw new Error("Un usuario no puede ser su propio líder.");
             const parentLeader = await prisma.user.findUnique({
                 where: { id: parentLeaderId },
                 include: { role: true }
