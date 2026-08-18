@@ -33,6 +33,7 @@ export function mapRoleFromDB(dbRole: any): Role {
         id: dbRole.id,
         name: dbRole.name,
         description: dbRole.description,
+        level: dbRole.level ?? 99,
         createdAt: dbRole.createdAt instanceof Date ? dbRole.createdAt.toISOString() : dbRole.createdAt,
     };
 }

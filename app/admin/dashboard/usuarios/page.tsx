@@ -47,10 +47,19 @@ export default function GestionUsuarios() {
         ]);
 
         const mappedUsers: User[] = result.data.map(mapUserFromDB);
-        const mappedRoles = dbRoles.map(mapRoleFromDB);
+        const mappedRoles = dbRoles
+            .map(mapRoleFromDB)
+            .sort((a, b) => a.level - b.level);
 
         setUsers(mappedUsers);
         setRoles(mappedRoles);
+
+        // El ADMIN no se puede crear (regla jerárquica): default al primer rol creable
+        setAdminData((prev) =>
+            prev.role === "ADMIN" || prev.role === ""
+                ? { ...prev, role: mappedRoles.filter((r) => r.level > 1)[0]?.name || "" }
+                : prev
+        );
         setTotalPages(result.totalPages);
         setTotalUsers(result.total);
         return mappedUsers;
@@ -210,9 +219,11 @@ export default function GestionUsuarios() {
                             value={adminData.role}
                             onChange={(e) => setAdminData({ ...adminData, role: e.target.value })}
                         >
-                            {roles.map(r => (
-                                <option key={r.id} value={r.name}>{r.name}</option>
-                            ))}
+                            {roles
+                                .filter((r) => r.level > 1) // ADMIN no se puede crear
+                                .map(r => (
+                                    <option key={r.id} value={r.name}>Nivel {r.level} · {r.name}</option>
+                                ))}
                         </select>
                     </div>
                     <div className="space-y-2">
@@ -236,7 +247,6 @@ export default function GestionUsuarios() {
                             >
                                 <option value="">Sin Líder (Nivel Superior)</option>
                                 {users
-                                    .filter(u => u.role !== "ADMIN")
                                     .filter(u => {
                                         if (u.role === "Activista") return false;
                                         if (u.role === "Comunitario" && adminData.role !== "Activista") return false;
