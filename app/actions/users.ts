@@ -86,6 +86,22 @@ export async function createUserAction(data: CreateUserInput) {
             throw new Error("No puedes crear un usuario con un rol igual o superior al tuyo.");
         }
 
+        // Ubicación según rol: campos en blanco = opera en varias zonas
+        const loc = {
+            provinceId: data.provinceId ? parseInt(String(data.provinceId), 10) : null,
+            districtId: data.districtId ? parseInt(String(data.districtId), 10) : null,
+            corregimientoId: data.corregimientoId ? parseInt(String(data.corregimientoId), 10) : null,
+            communityId: data.communityId ? parseInt(String(data.communityId), 10) : null,
+        };
+        if (role.name !== "ADMIN" && role.name !== "Lider Global") {
+            if (!loc.provinceId || !loc.districtId || !loc.corregimientoId) {
+                throw new Error("Este rol requiere provincia, distrito y corregimiento. La comunidad puede quedar en blanco (multi-zona).");
+            }
+            if (role.name === "Activista" && !loc.communityId) {
+                throw new Error("El Activista debe tener definida su comunidad.");
+            }
+        }
+
         // Generar inviteCode si es líder (opcional para admin)
         const inviteCode = (data.role !== 'ADMIN')
             ? `${data.name.substring(0, 2).toUpperCase()}${Math.floor(1000 + Math.random() * 9000)}`
@@ -105,10 +121,10 @@ export async function createUserAction(data: CreateUserInput) {
                 roleId: role.id,
                 mustChangePassword: isTempPassword,
                 createdBy: data.createdBy ? parseInt(String(data.createdBy), 10) : null,
-                provinceId: data.provinceId ? parseInt(String(data.provinceId), 10) : null,
-                districtId: data.districtId ? parseInt(String(data.districtId), 10) : null,
-                corregimientoId: data.corregimientoId ? parseInt(String(data.corregimientoId), 10) : null,
-                communityId: data.communityId ? parseInt(String(data.communityId), 10) : null,
+                provinceId: loc.provinceId,
+                districtId: loc.districtId,
+                corregimientoId: loc.corregimientoId,
+                communityId: loc.communityId,
                 inviteCode: inviteCode,
             }
         });

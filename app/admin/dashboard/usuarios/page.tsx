@@ -84,11 +84,31 @@ export default function GestionUsuarios() {
         password: "",
         phone: "",
         role: "ADMIN",
-        parentLeaderId: ""
+        parentLeaderId: "",
+        provinceId: "",
+        districtId: "",
+        corregimientoId: "",
+        communityId: ""
     });
 
     const handleCreateAdmin = (e: React.FormEvent) => {
         e.preventDefault();
+
+        const isGlobal = adminData.role === "Lider Global";
+        if (adminData.role !== "ADMIN" && !isGlobal) {
+            if (!adminData.provinceId || !adminData.districtId || !adminData.corregimientoId) {
+                toast.warning("Este rol requiere provincia, distrito y corregimiento (la comunidad puede quedar en blanco).");
+                return;
+            }
+            if (adminData.role === "Activista" && !adminData.communityId) {
+                toast.warning("El Activista debe tener definida su comunidad.");
+                return;
+            }
+            if (!adminData.parentLeaderId) {
+                toast.warning("El Líder Superior es obligatorio.");
+                return;
+            }
+        }
 
         startTransition(async () => {
             const result = await createUserAction({
@@ -98,7 +118,7 @@ export default function GestionUsuarios() {
 
             if (result.success) {
                 await refreshData();
-                setAdminData({ name: "", lastName: "", email: "", password: "", phone: "", role: "ADMIN", parentLeaderId: "" });
+                setAdminData({ name: "", lastName: "", email: "", password: "", phone: "", role: "ADMIN", parentLeaderId: "", provinceId: "", districtId: "", corregimientoId: "", communityId: "" });
                 toast.success(`Usuario creado exitosamente. Clave temporal: ${result.tempPassword}`, { duration: 20000 });
             } else {
                 toast.error("Error al crear usuario: " + result.error);
@@ -257,6 +277,22 @@ export default function GestionUsuarios() {
                             </select>
                         </div>
                     )}
+                    {adminData.role !== "ADMIN" && adminData.role !== "Lider Global" && (
+                        <div className="space-y-2 sm:col-span-2 lg:col-span-3">
+                            <label className="text-sm font-semibold text-slate-700">Ubicación Geográfica</label>
+                            <LocationSelector
+                                provinceId={adminData.provinceId}
+                                districtId={adminData.districtId}
+                                corregimientoId={adminData.corregimientoId}
+                                communityId={adminData.communityId}
+                                setProvinceId={(v) => setAdminData({ ...adminData, provinceId: v })}
+                                setDistrictId={(v) => setAdminData({ ...adminData, districtId: v })}
+                                setCorregimientoId={(v) => setAdminData({ ...adminData, corregimientoId: v })}
+                                setCommunityId={(v) => setAdminData({ ...adminData, communityId: v })}
+                            />
+                            <p className="text-xs text-slate-400">Provincia, distrito y corregimiento obligatorios; comunidad en blanco = multi-zona. El Activista debe tener comunidad.</p>
+                        </div>
+                    )}
                     <div className="flex items-end sm:col-span-2 lg:col-span-3">
                         <button
                             type="submit"
@@ -383,7 +419,7 @@ export default function GestionUsuarios() {
             {/* MODAL DE EDICIÓN */}
             {editingUser && (
                 <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl overflow-hidden border border-gray-100">
+                    <div className="bg-white rounded-3xl shadow-2xl w-full max-w-xl max-h-[90vh] flex flex-col overflow-hidden border border-gray-100">
                         <div className="px-8 py-6 bg-slate-50 border-b border-gray-100 flex justify-between items-center">
                             <div>
                                 <h2 className="text-xl font-black text-slate-900">Editar Usuario</h2>
@@ -394,7 +430,7 @@ export default function GestionUsuarios() {
                             </button>
                         </div>
 
-                        <form onSubmit={handleUpdateUser} className="p-8 space-y-5">
+                        <form onSubmit={handleUpdateUser} className="p-8 space-y-5 overflow-y-auto">
                             <div className="grid grid-cols-2 gap-4">
                                 <div className="space-y-1">
                                     <label className="text-xs font-bold text-slate-500">Nombre</label>
@@ -451,7 +487,7 @@ export default function GestionUsuarios() {
                                             value={editingUser.parentLeaderId || ""}
                                             onChange={(e) => setEditingUser({ ...editingUser, parentLeaderId: e.target.value })}
                                         >
-                                            <option value="">Sin Líder (TOP)</option>
+                                            <option value="">Sin líder (top de jerarquía)</option>
                                             {users
                                                 .filter(u => u.id !== editingUser.id)
                                                 .filter(u => {

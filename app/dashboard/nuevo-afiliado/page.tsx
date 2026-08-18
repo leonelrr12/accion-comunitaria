@@ -52,6 +52,11 @@ export default function NuevoAfiliado() {
             return;
         }
 
+        if (!formData.communityId) {
+            toast.warning("El afiliado debe tener definida su comunidad.");
+            return;
+        }
+
         startTransition(async () => {
             const result = await createAffiliate({
                 ...formData,

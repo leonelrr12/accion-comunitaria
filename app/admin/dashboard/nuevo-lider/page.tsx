@@ -51,9 +51,17 @@ export default function CrearLider() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Validation: Verify that location is fully selected (Lider Global es nacional)
-        if (formData.role !== "Lider Global" && (!formData.provinceId || !formData.districtId || !formData.corregimientoId || !formData.communityId)) {
-            toast.warning("Por favor, completa toda la ubicación geográfica para el líder.");
+        // Ubicación según rol: comunidad en blanco = multi-zona; Lider Global es nacional
+        if (formData.role !== "Lider Global" && (!formData.provinceId || !formData.districtId || !formData.corregimientoId)) {
+            toast.warning("Este rol requiere provincia, distrito y corregimiento (la comunidad puede quedar en blanco).");
+            return;
+        }
+        if (formData.role === "Activista" && !formData.communityId) {
+            toast.warning("El Activista debe tener definida su comunidad.");
+            return;
+        }
+        if (formData.role !== "Lider Global" && !formData.parentLeaderId) {
+            toast.warning("El Líder Superior es obligatorio.");
             return;
         }
 

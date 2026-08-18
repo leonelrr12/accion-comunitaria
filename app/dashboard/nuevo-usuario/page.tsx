@@ -23,13 +23,26 @@ export default function NuevoUsuario() {
         lastName: "",
         email: "",
         phone: "",
-        provinceId: "8",    // Panamá
-        districtId: "2",    // San Miguelito
+        provinceId: "",
+        districtId: "",
         corregimientoId: "",
         communityId: "",
         role: "",
         parentLeaderId: "",
     });
+
+    // Prellenar ubicación desde el creador; los blancos se llenan al momento de crear
+    useEffect(() => {
+        if (currentUser) {
+            setFormData((prev) => ({
+                ...prev,
+                provinceId: currentUser.provinceId?.toString() || "",
+                districtId: currentUser.districtId?.toString() || "",
+                corregimientoId: currentUser.corregimientoId?.toString() || "",
+                communityId: currentUser.communityId?.toString() || "",
+            }));
+        }
+    }, [currentUser?.id]);
 
     useEffect(() => {
         if (currentUser?.role === "ADMIN") {
@@ -64,10 +77,19 @@ export default function NuevoUsuario() {
             return;
         }
 
-        // Validation: ubicación geográfica completa (Lider Global es nacional)
+        // Ubicación según rol: comunidad en blanco = multi-zona; Lider Global es nacional
         const isGlobal = formData.role === "Lider Global";
-        if (!isGlobal && (!formData.provinceId || !formData.districtId || !formData.corregimientoId || !formData.communityId)) {
-            toast.warning("Por favor, completa toda la ubicación geográfica.");
+        if (!isGlobal && (!formData.provinceId || !formData.districtId || !formData.corregimientoId)) {
+            toast.warning("Este rol requiere provincia, distrito y corregimiento (la comunidad puede quedar en blanco).");
+            return;
+        }
+        if (formData.role === "Activista" && !formData.communityId) {
+            toast.warning("El Activista debe tener definida su comunidad.");
+            return;
+        }
+        // El Líder Superior es obligatorio cuando lo elige el ADMIN (los demás roles asignan bajo sí mismos)
+        if (currentUser?.role === "ADMIN" && !isGlobal && !formData.parentLeaderId) {
+            toast.warning("El Líder Superior es obligatorio.");
             return;
         }
 
