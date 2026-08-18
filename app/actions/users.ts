@@ -33,7 +33,8 @@ export async function getUsers({ page = 1, pageSize = 10, search = "" }: GetUser
                 include: {
                     role: true,
                     _count: { select: { persons: true } },
-                    subordinates: { include: { leader: { select: { id: true, name: true, lastName: true } } } },
+                    // NOTA: en el schema, "leaders" = filas donde el usuario es el SUBORDINADO (su padre)
+                    leaders: { include: { leader: { select: { id: true, name: true, lastName: true } } } },
                     creator: { select: { id: true, name: true, lastName: true } },
                 },
                 orderBy: { createdAt: "desc" },
@@ -57,7 +58,7 @@ export async function getAllUsers() {
             include: {
                 role: true,
                 _count: { select: { persons: true } },
-                subordinates: { include: { leader: { select: { id: true, name: true, lastName: true } } } },
+                leaders: { include: { leader: { select: { id: true, name: true, lastName: true } } } },
             },
             orderBy: { createdAt: "desc" },
         });

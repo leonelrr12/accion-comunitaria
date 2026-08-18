@@ -19,8 +19,9 @@ export function mapUserFromDB(dbUser: any): User {
         inviteCode: dbUser.inviteCode,
         createdBy: dbUser.createdBy,
         registeredBy: dbUser.creator ? `${dbUser.creator.name} ${dbUser.creator.lastName}` : null,
-        parentLeaderId: dbUser.subordinates && dbUser.subordinates.length > 0 && dbUser.subordinates[0].leader
-            ? String(dbUser.subordinates[0].leader.id)
+        // "leaders" en el schema = filas donde el usuario es subordinado → su padre
+        parentLeaderId: dbUser.leaders && dbUser.leaders.length > 0 && dbUser.leaders[0].leader
+            ? String(dbUser.leaders[0].leader.id)
             : "",
         mustChangePassword: dbUser.mustChangePassword,
         lastLogin: dbUser.lastLogin ? (dbUser.lastLogin instanceof Date ? dbUser.lastLogin.toISOString() : dbUser.lastLogin) : null,
