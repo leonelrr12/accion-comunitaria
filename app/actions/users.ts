@@ -34,6 +34,7 @@ export async function getUsers({ page = 1, pageSize = 10, search = "" }: GetUser
                     role: true,
                     _count: { select: { persons: true } },
                     leaders: { include: { leader: true } },
+                    creator: { select: { id: true, name: true, lastName: true } },
                 },
                 orderBy: { createdAt: "desc" },
                 skip: (page - 1) * pageSize,
@@ -80,7 +81,8 @@ export async function createUserAction(data: CreateUserInput) {
             throw new Error(`Role ${data.role} not found`);
         }
 
-        if (creatorRole && role.level <= creatorRole.level) {
+        // ADMIN está fuera de la jerarquía: puede crear cualquier rol (incluido otro ADMIN)
+        if (creatorRole && creatorRole.name !== "ADMIN" && role.level <= creatorRole.level) {
             throw new Error("No puedes crear un usuario con un rol igual o superior al tuyo.");
         }
 
@@ -111,8 +113,11 @@ export async function createUserAction(data: CreateUserInput) {
             }
         });
 
-        // 3. Líder superior: por defecto el propio creador; si se indica otro, validar jerarquía
-        const parentLeaderId = data.parentLeaderId ? parseInt(String(data.parentLeaderId)) : session.id;
+        // 3. Líder superior: los líderes asignan a sus creados bajo su mando;
+        // el ADMIN solo asigna padre si lo elige explícitamente (está fuera de la jerarquía)
+        const parentLeaderId = data.parentLeaderId
+            ? parseInt(String(data.parentLeaderId))
+            : creatorRole?.name === "ADMIN" ? null : session.id;
         if (parentLeaderId) {
             const parentLeader = await prisma.user.findUnique({
                 where: { id: parentLeaderId },
@@ -123,11 +128,6 @@ export async function createUserAction(data: CreateUserInput) {
                 // Validación 1: El activista no puede liderar a nadie
                 if (parentLeader.role.name === "Activista") {
                     throw new Error("Un Activista no puede ser líder superior de nadie.");
-                }
-
-                // Validación 2: El comunitario solo puede ser líder del Activista
-                if (parentLeader.role.name === "Comunitario" && data.role !== "Activista") {
-                    throw new Error("Un Comunitario solo puede liderar a usuarios con rol de Activista.");
                 }
 
                 await prisma.userHierarchy.create({
@@ -255,7 +255,8 @@ export async function updateUserAction(id: number, data: UpdateUserInput) {
         const session = await requireAuth();
         const creatorRole = await prisma.role.findUnique({ where: { name: session.role as string } });
         const targetUser = await prisma.user.findUnique({ where: { id }, include: { role: true } });
-        if (targetUser && creatorRole && targetUser.role.level <= creatorRole.level) {
+        // ADMIN edita a cualquiera; el resto solo a roles inferiores
+        if (targetUser && creatorRole && creatorRole.name !== "ADMIN" && targetUser.role.level <= creatorRole.level) {
             throw new Error("Solo puedes editar usuarios con un rol inferior al tuyo.");
         }
         const role = await prisma.role.findUnique({

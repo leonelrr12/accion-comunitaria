@@ -21,6 +21,7 @@ export interface User {
     communityId?: number | null;
     inviteCode?: string | null;
     createdBy?: number | null;
+    registeredBy?: string | null;
     parentLeaderId?: string | null;
     mustChangePassword: boolean;
     lastLogin?: string | null;

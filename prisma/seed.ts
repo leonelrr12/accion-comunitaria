@@ -11,10 +11,11 @@ async function main() {
     // 1. Crear Roles Iniciales
     const roles = [
         { name: "ADMIN", description: "Acceso total al sistema", level: 1 },
-        { name: "Lider de Corregimiento", description: "Coordinador Corregimiento", level: 2 },
-        { name: "Lider de Comunidad", description: "Responsable de Comunidad", level: 3 },
-        { name: "Coordinador", description: "Coordinado por Comunidad", level: 4 },
-        { name: "Activista", description: "Apoyo en campo", level: 5 },
+        { name: "Lider Global", description: "Coordinador General del Movimiento", level: 2 },
+        { name: "Lider de Corregimiento", description: "Coordinador Corregimiento", level: 3 },
+        { name: "Lider de Comunidad", description: "Responsable de Comunidad", level: 4 },
+        { name: "Coordinador", description: "Coordinado por Comunidad", level: 5 },
+        { name: "Activista", description: "Apoyo en campo", level: 6 },
     ];
 
     console.log("- Procesando roles...");

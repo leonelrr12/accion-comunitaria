@@ -51,8 +51,8 @@ export default function CrearLider() {
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
 
-        // Validation: Verify that location is fully selected
-        if (!formData.provinceId || !formData.districtId || !formData.corregimientoId || !formData.communityId) {
+        // Validation: Verify that location is fully selected (Lider Global es nacional)
+        if (formData.role !== "Lider Global" && (!formData.provinceId || !formData.districtId || !formData.corregimientoId || !formData.communityId)) {
             toast.warning("Por favor, completa toda la ubicación geográfica para el líder.");
             return;
         }
@@ -173,8 +173,8 @@ export default function CrearLider() {
                                     <option value="">Líder Principal (Nivel 0)</option>
                                     {availableLeaders
                                         .filter((u: any) => {
+                                            if (u.role.name === "ADMIN") return false; // ADMIN fuera de la jerarquía
                                             if (u.role.name === "Activista") return false;
-                                            if (u.role.name === "Comunitario" && formData.role !== "Activista") return false;
                                             return true;
                                         })
                                         .map((u: any) => (

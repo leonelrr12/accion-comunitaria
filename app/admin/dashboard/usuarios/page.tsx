@@ -219,11 +219,9 @@ export default function GestionUsuarios() {
                             value={adminData.role}
                             onChange={(e) => setAdminData({ ...adminData, role: e.target.value })}
                         >
-                            {roles
-                                .filter((r) => r.level > 1) // ADMIN no se puede crear
-                                .map(r => (
-                                    <option key={r.id} value={r.name}>Nivel {r.level} · {r.name}</option>
-                                ))}
+                            {roles.map(r => (
+                                <option key={r.id} value={r.name}>Nivel {r.level} · {r.name}</option>
+                            ))}
                         </select>
                     </div>
                     <div className="space-y-2">
@@ -248,8 +246,8 @@ export default function GestionUsuarios() {
                                 <option value="">Sin Líder (Nivel Superior)</option>
                                 {users
                                     .filter(u => {
+                                        if (u.role === "ADMIN") return false; // ADMIN fuera de la jerarquía
                                         if (u.role === "Activista") return false;
-                                        if (u.role === "Comunitario" && adminData.role !== "Activista") return false;
                                         return true;
                                     })
                                     .map(u => (
@@ -321,7 +319,6 @@ export default function GestionUsuarios() {
                         </thead>
                         <tbody className="bg-white divide-y divide-gray-100">
                             {users.map((user) => {
-                                const creator = users.find(u => u.id === user.createdBy);
                                 return (
                                     <tr key={user.id} className="hover:bg-slate-50 transition-colors">
                                         <td className="px-6 py-4 whitespace-nowrap">
@@ -338,7 +335,7 @@ export default function GestionUsuarios() {
                                             {user.email}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-[11px] text-slate-500">
-                                            {creator ? `${creator.name} ${creator.lastName}` : "SISTEMA"}
+                                            {user.registeredBy || "SISTEMA"}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-center space-x-2">
                                             <button
@@ -437,7 +434,13 @@ export default function GestionUsuarios() {
                                         value={editingUser.role}
                                         onChange={(e) => setEditingUser({ ...editingUser, role: e.target.value })}
                                     >
-                                        {roles.map(r => <option key={r.id} value={r.name}>{r.name}</option>)}
+                                        {roles
+                                            .filter(r => r.level > 1 || r.name === editingUser.role)
+                                            .map(r => (
+                                                <option key={r.id} value={r.name}>
+                                                    Nivel {r.level} · {r.name}
+                                                </option>
+                                            ))}
                                     </select>
                                 </div>
                                 {editingUser.role !== "ADMIN" && (
@@ -450,10 +453,10 @@ export default function GestionUsuarios() {
                                         >
                                             <option value="">Sin Líder (TOP)</option>
                                             {users
-                                                .filter(u => u.id !== editingUser.id && u.role !== "ADMIN")
+                                                .filter(u => u.id !== editingUser.id)
                                                 .filter(u => {
+                                                    if (u.role === "ADMIN") return false; // ADMIN fuera de la jerarquía
                                                     if (u.role === "Activista") return false;
-                                                    if (u.role === "Comunitario" && editingUser.role !== "Activista") return false;
                                                     return true;
                                                 })
                                                 .map(u => (

@@ -5,7 +5,7 @@ import { useAppStore } from "@/lib/store";
 import { useRouter } from "next/navigation";
 import { LocationSelector } from "../../../components/ui/LocationSelector";
 import { getRoles } from "../../actions/roles";
-import { createUserAction } from "../../actions/users";
+import { createUserAction, getAllUsers } from "../../actions/users";
 import { Loader2, UserPlus, ShieldAlert, ArrowLeft } from "lucide-react";
 import { toast } from "sonner";
 import Link from "next/link";
@@ -17,6 +17,7 @@ export default function NuevoUsuario() {
 
     const [roles, setRoles] = useState<any[]>([]);
     const [creatableRoles, setCreatableRoles] = useState<any[]>([]);
+    const [availableLeaders, setAvailableLeaders] = useState<any[]>([]);
     const [formData, setFormData] = useState({
         name: "",
         lastName: "",
@@ -27,7 +28,18 @@ export default function NuevoUsuario() {
         corregimientoId: "",
         communityId: "",
         role: "",
+        parentLeaderId: "",
     });
+
+    useEffect(() => {
+        if (currentUser?.role === "ADMIN") {
+            getAllUsers().then((users: any[]) => {
+                setAvailableLeaders(
+                    users.filter((u: any) => u.role.name !== "ADMIN" && u.role.name !== "Activista")
+                );
+            });
+        }
+    }, [currentUser?.role]);
 
     useEffect(() => {
         getRoles().then((all: any[]) => {
@@ -52,8 +64,9 @@ export default function NuevoUsuario() {
             return;
         }
 
-        // Validation: ubicación geográfica completa
-        if (!formData.provinceId || !formData.districtId || !formData.corregimientoId || !formData.communityId) {
+        // Validation: ubicación geográfica completa (Lider Global es nacional)
+        const isGlobal = formData.role === "Lider Global";
+        if (!isGlobal && (!formData.provinceId || !formData.districtId || !formData.corregimientoId || !formData.communityId)) {
             toast.warning("Por favor, completa toda la ubicación geográfica.");
             return;
         }
@@ -159,19 +172,44 @@ export default function NuevoUsuario() {
                             </p>
                         </div>
 
-                        <div>
-                            <label className="block text-sm font-medium text-slate-700 mb-1">Ubicación geográfica</label>
-                            <LocationSelector
-                                provinceId={formData.provinceId}
-                                districtId={formData.districtId}
-                                corregimientoId={formData.corregimientoId}
-                                communityId={formData.communityId}
-                                setProvinceId={(v) => setFormData((p) => ({ ...p, provinceId: v }))}
-                                setDistrictId={(v) => setFormData((p) => ({ ...p, districtId: v }))}
-                                setCorregimientoId={(v) => setFormData((p) => ({ ...p, corregimientoId: v }))}
-                                setCommunityId={(v) => setFormData((p) => ({ ...p, communityId: v }))}
-                            />
-                        </div>
+                        {currentUser?.role === "ADMIN" && (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Líder Superior (solo ADMIN)</label>
+                                <select
+                                    value={formData.parentLeaderId}
+                                    onChange={(e) => setFormData({ ...formData, parentLeaderId: e.target.value })}
+                                    className="w-full px-4 py-2.5 rounded-xl border border-gray-200 focus:outline-none focus:ring-2 focus:ring-blue-500 text-sm bg-white"
+                                >
+                                    <option value="">Sin líder (top de jerarquía)</option>
+                                    {availableLeaders.map((l: any) => (
+                                        <option key={l.id} value={l.id}>{l.name} {l.lastName} ({l.role.name})</option>
+                                    ))}
+                                </select>
+                                <p className="text-xs text-slate-400 mt-1">
+                                    Los demás roles asignan a sus creados bajo su propio liderazgo automáticamente.
+                                </p>
+                            </div>
+                        )}
+
+                        {formData.role === "Lider Global" ? (
+                            <div className="bg-blue-50 border border-blue-100 rounded-xl p-4 text-sm text-blue-700">
+                                🌎 <strong>Líder Global es nacional</strong> — no requiere ubicación geográfica.
+                            </div>
+                        ) : (
+                            <div>
+                                <label className="block text-sm font-medium text-slate-700 mb-1">Ubicación geográfica</label>
+                                <LocationSelector
+                                    provinceId={formData.provinceId}
+                                    districtId={formData.districtId}
+                                    corregimientoId={formData.corregimientoId}
+                                    communityId={formData.communityId}
+                                    setProvinceId={(v) => setFormData((p) => ({ ...p, provinceId: v }))}
+                                    setDistrictId={(v) => setFormData((p) => ({ ...p, districtId: v }))}
+                                    setCorregimientoId={(v) => setFormData((p) => ({ ...p, corregimientoId: v }))}
+                                    setCommunityId={(v) => setFormData((p) => ({ ...p, communityId: v }))}
+                                />
+                            </div>
+                        )}
 
                         <button
                             type="submit"

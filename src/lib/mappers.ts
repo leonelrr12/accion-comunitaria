@@ -18,6 +18,7 @@ export function mapUserFromDB(dbUser: any): User {
         communityId: dbUser.communityId,
         inviteCode: dbUser.inviteCode,
         createdBy: dbUser.createdBy,
+        registeredBy: dbUser.creator ? `${dbUser.creator.name} ${dbUser.creator.lastName}` : null,
         parentLeaderId: dbUser.leaders && dbUser.leaders.length > 0 ? String(dbUser.leaders[0].leaderId) : "",
         mustChangePassword: dbUser.mustChangePassword,
         lastLogin: dbUser.lastLogin ? (dbUser.lastLogin instanceof Date ? dbUser.lastLogin.toISOString() : dbUser.lastLogin) : null,
