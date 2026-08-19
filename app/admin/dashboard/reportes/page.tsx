@@ -327,7 +327,7 @@ export default function ReportesPage() {
 
                             <div className="flex justify-between items-center">
                                 <h3 className="font-bold text-slate-900 flex items-center gap-2">
-                                    <Users className="h-4 w-4 text-blue-500" /> Afiliados de {selectedLeaderName ? leaderName(selectedLeaderName) : ""}
+                                    <Users className="h-4 w-4 text-blue-500" /> Afiliados de la red de {selectedLeaderName ? leaderName(selectedLeaderName) : ""}
                                 </h3>
                                 {leaderReport.affiliates.length > 0 && (
                                     <button
@@ -338,11 +338,47 @@ export default function ReportesPage() {
                                     </button>
                                 )}
                             </div>
-                            <AffiliatesTable affiliates={leaderReport.affiliates} />
+                            <NetworkAffiliatesTable affiliates={leaderReport.affiliates} />
                         </>
                     )}
                 </div>
             )}
+        </div>
+    );
+}
+
+function NetworkAffiliatesTable({ affiliates }: { affiliates: Affiliate[] }) {
+    if (affiliates.length === 0) {
+        return <div className="py-10 text-center text-slate-400">Sin afiliados en la red de este líder.</div>;
+    }
+    return (
+        <div className="overflow-x-auto border border-gray-100 rounded-xl">
+            <table className="w-full text-sm">
+                <thead>
+                    <tr className="bg-slate-50">
+                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Nombre</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Cédula</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Teléfono</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Corregimiento</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Comunidad</th>
+                        <th className="px-6 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Sponsor que lo ingresó</th>
+                    </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-100">
+                    {affiliates.map((a) => (
+                        <tr key={a.id} className="hover:bg-slate-50">
+                            <td className="px-6 py-2.5 font-semibold text-slate-900 whitespace-nowrap">{a.name} {a.lastName}</td>
+                            <td className="px-6 py-2.5 text-slate-600 whitespace-nowrap">{a.cedula}</td>
+                            <td className="px-6 py-2.5 text-slate-600 whitespace-nowrap">{a.phone || "—"}</td>
+                            <td className="px-6 py-2.5 text-slate-600 whitespace-nowrap">{a.corregimiento?.name || "—"}</td>
+                            <td className="px-6 py-2.5 text-slate-600 whitespace-nowrap">{a.community?.name || "—"}</td>
+                            <td className="px-6 py-2.5 text-slate-600 whitespace-nowrap">
+                                {a.leader ? `${a.leader.name} ${a.leader.lastName}${a.leader.role ? ` (${a.leader.role.name})` : ""}` : "—"}
+                            </td>
+                        </tr>
+                    ))}
+                </tbody>
+            </table>
         </div>
     );
 }

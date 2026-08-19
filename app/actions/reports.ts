@@ -103,15 +103,41 @@ export async function getCommunityAffiliates(communityId: number, leaderUserId?:
     }
 }
 
-// Afiliados de un líder + desglose por comunidad + totales
+// Todos los ids de la red debajo de un líder (recursivo sobre user_hierarchy)
+async function getNetworkUserIds(rootId: number): Promise<number[]> {
+    const rows = await prisma.userHierarchy.findMany({
+        select: { leaderId: true, subordinateId: true },
+    });
+    const children = new Map<number, number[]>();
+    for (const r of rows) {
+        const list = children.get(r.leaderId) ?? [];
+        list.push(r.subordinateId);
+        children.set(r.leaderId, list);
+    }
+    const result: number[] = [];
+    const stack = [rootId];
+    while (stack.length > 0) {
+        const id = stack.pop() as number;
+        for (const kid of children.get(id) ?? []) {
+            result.push(kid);
+            stack.push(kid);
+        }
+    }
+    return result;
+}
+
+// Afiliados de TODA la red de un líder (directos + los de sus sub-líderes)
 export async function getAffiliatesByLeader(leaderUserId: number) {
     try {
         await requireAdmin();
+        // Red completa: el líder + todos los usuarios bajo él en la jerarquía
+        const networkIds = [leaderUserId, ...(await getNetworkUserIds(leaderUserId))];
+
         const [affiliates, byCommunity, total] = await Promise.all([
             prisma.person.findMany({
-                where: { leaderUserId },
+                where: { leaderUserId: { in: networkIds } },
                 include: {
-                    leader: { select: { id: true, name: true, lastName: true } },
+                    leader: { select: { id: true, name: true, lastName: true, role: { select: { name: true } } } },
                     province: { select: { name: true } },
                     district: { select: { name: true } },
                     corregimiento: { select: { name: true } },
@@ -121,10 +147,10 @@ export async function getAffiliatesByLeader(leaderUserId: number) {
             }),
             prisma.person.groupBy({
                 by: ["communityId"],
-                where: { leaderUserId },
+                where: { leaderUserId: { in: networkIds } },
                 _count: { _all: true },
             }),
-            prisma.person.count({ where: { leaderUserId } }),
+            prisma.person.count({ where: { leaderUserId: { in: networkIds } } }),
         ]);
 
         return {
