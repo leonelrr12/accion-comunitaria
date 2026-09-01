@@ -47,6 +47,7 @@ export const metadata: Metadata = {
 };
 
 import { Toaster } from "sonner";
+import SessionProvider from "../components/SessionProvider";
 
 export default function RootLayout({
   children,
@@ -58,7 +59,7 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <SessionProvider>{children}</SessionProvider>
         <Toaster position="top-right" richColors closeButton />
       </body>
     </html>
